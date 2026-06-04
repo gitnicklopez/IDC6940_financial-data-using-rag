@@ -1,7 +1,7 @@
 ---
 title: "Evaluating Numerical Fidelity in Financial Documents: A Comparative Analysis of Naive and Table-Aware Dual-Branch RAG Architectures"
 subtitle: "A Capstone Project in Data Science"
-author(s): "Crystal Shin, Gredy, and Nick Lopez"
+author(s): "Crystal Shin, Gredy Garrido, and Nick Lopez"
 date: '`r Sys.Date()`'
 format:
   html:
@@ -109,34 +109,37 @@ A study was conducted to determine how...
 
 ```{r, warning=FALSE, echo=T, message=FALSE}
 # loading packages 
-library(tidyverse)
-library(knitr)
-library(ggthemes)
-library(ggrepel)
-library(dslabs)
+# library(tidyverse)
+# library(knitr)
+# library(ggthemes)
+# library(ggrepel)
+# library(dslabs)
 ```
 
 ```{python}
-import pandas as pd
+#| eval: false
+# import pandas as pd
 ```
 
 ```{r, warning=FALSE, echo=TRUE}
+
+
 # Load Data
-kable(head(murders))
+# kable(head(murders))
 
-ggplot1 = murders %>% ggplot(mapping = aes(x=population/10^6, y=total)) 
+# ggplot1 = murders %>% ggplot(mapping = aes(x=population/10^6, y=total)) 
 
-  ggplot1 + geom_point(aes(col=region), size = 4) +
-  geom_text_repel(aes(label=abb)) +
-  scale_x_log10() +
-  scale_y_log10() +
-  geom_smooth(formula = "y~x", method=lm,se = F)+
-  xlab("Populations in millions (log10 scale)") + 
-  ylab("Total number of murders (log10 scale)") +
-  ggtitle("US Gun Murders in 2010") +
-  scale_color_discrete(name = "Region")+
-      theme_bw()
-  
+  # ggplot1 + geom_point(aes(col=region), size = 4) +
+  # geom_text_repel(aes(label=abb)) +
+  # scale_x_log10() +
+  # scale_y_log10() +
+  # geom_smooth(formula = "y~x", method=lm,se = F)+
+  # xlab("Populations in millions (log10 scale)") + 
+  # ylab("Total number of murders (log10 scale)") +
+  # ggtitle("US Gun Murders in 2010") +
+  # scale_color_discrete(name = "Region")+
+  #     theme_bw()
+
 
 ```
 
