@@ -1,7 +1,7 @@
 ---
-title: "Present a great story for data science projects"
-subtitle: "This is a Slide Template"
-author: "Students names (Advisor: Dr. Cohen)"
+title: "Evaluating Numerical Fidelity in Financial Documents: A Comparative Analysis of Naive and Table-Aware Dual-Branch RAG Architectures"
+subtitle: "A Capstone Project in Data Science"
+author(s): "Crystal Shin, Gredy, and Nick Lopez"
 date: '`r Sys.Date()`'
 format:
   revealjs
