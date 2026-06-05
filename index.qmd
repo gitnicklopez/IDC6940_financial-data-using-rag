@@ -107,6 +107,7 @@ $$
 
 A study was conducted to determine how...
 
+
 ```{r, warning=FALSE, echo=T, message=FALSE}
 # loading packages 
 # library(tidyverse)
@@ -115,8 +116,8 @@ A study was conducted to determine how...
 # library(ggrepel)
 # library(dslabs)
 ```
-
 ```{python}
+import pandas as pd
 #| eval: false
 # import pandas as pd
 ```
