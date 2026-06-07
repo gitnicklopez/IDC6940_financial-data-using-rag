@@ -34,39 +34,34 @@ Nice report! I am adding this to show updates from RStudio.
 
 ## Introduction
 
-The introduction should:
+### The Real-World Risk: Why Tiny AI Mistakes Matter
+Today, many companies use AI assistants to quickly find information buried in their internal reports. These systems are great at summarizing emails or articles, but they often fail when reading financial tables [@guo2026ftrag]. Imagine an employee asking the AI system for a company’s total debt from a dense financial document. In a typical financial table, a number like “450” might mean $450 million if it is listed under a header that says “figures in millionsthousands.” Because standard AI reads text in a straight line from left to right, it can lose track of those important headers and labels. It might report the debt as just $450 or link the number to the wrong year entirely. In the world of finance, a mistake like this isn’t just a small typo; it can lead to massive losses or legal trouble. 
 
--   Develop a storyline that captures attention and maintains interest.
+This problem is commonly known as the gap between what a table says and what the AI actually understands. The dominant approach for building document-querying AI systems is Retrieval-Augmented Generation (RAG) (Malali, 2025) — a method that retrieves relevant passages from a document library before generating a response, grounding the AI’s answer in real source material. While RAG has proven effective for regulatory compliance, audit reporting, and other text-heavy financial tasks, its standard pipeline was designed for narrative prose and breaks down when applied to structured tables. This paper compares a standard RAG baseline against a table-aware pipeline on a corpus of real financial reports, introducing a Numerical Atomic Verification (NAV) metric to explicitly measure numerical fidelity in model outputs.
 
--   Your audience is your peers
+### The Core Problem Statement: The Structural Evidence Gap
 
--   Clearly state the problem or question you're addressing.
+The core issue is that standard AI systems struggle to read complex financial tables. While these systems are great at reading plain text, they fail when processing financial data because they try to parse tables line by line, as if they were sentences [@guo2026ftrag]. We refer to this as the Structural Evidence Gap. This leads to two main problems:
 
-<!-- -->
+  1. **Context Loss**: When the AI system breaks text into smaller chunks, it separates numbers from their labels (like headers or rows). This means the AI loses track of what the numbers actually represent.
+  2. **Formatting Issues**: Because standard tools read tables linearly, they jumble the data, mixing up different rows and columns.
 
--   Introduce why it is relevant needs.
+While these AI systems work well for general reading, they fail when analyzing complex financial records in which answers are hidden across multiple structured tables.
 
--   Provide an overview of your approach.
+### Overview of Approach: Table-Aware Dual-Branch RAG
 
-Example of writing including citing references:
+To solve the problems described above, this paper compares two approaches:
 
-*This is an introduction to ..... regression, which is a non-parametric
-estimator that estimates the conditional expectation of two variables
-which is random. The goal of a kernel regression is to discover the
-non-linear relationship between two random variables. To discover the
-non-linear relationship, kernel estimator or kernel smoothing is the
-main method to estimate the curve for non-parametric statistics. In
-kernel estimator, weight function is known as kernel function
-[@efr2008]. Cite this paper [@bro2014principal]. The GEE [@wang2014].
-The PCA [@daffertshofer2004pca]*. Topology can be used in machine
-learning [@adams2021topology]
+  - Architecture A (Naive RAG): This standard method uses simple linear PDF reading and basic semantic search, which often misses the structure of financial tables.
+  - Architecture B (Table-Aware Dual-Branch RAG): This is our proposed solution, which helps retain structural lineage between document context and table information.
 
-For Symbolic Regression [@wang2019symbolic] *This is my work and I want
-to add more work...*
+Our approach includes three key steps:
 
-Cite new paper [@su2012linear]
+  1. Bifurcated Ingestion: The system separates narrative text from tabular data at the beginning, ensuring tables are preserved as structured data rather than flattened into plain text.
+  2. Hybrid Indexing: We store each table row as an individual record, enriched with its column/row labels [@table_aware_chinese]. This ensures the AI system always knows exactly what a number represents (e.g., Fiscal Year 2025 vs. “2025”).
+  3. Numerical Atomic Verification (NAV): Before the system provides an answer, a final verification step automatically checks all numbers against the original source document. If a discrepancy or unit mismatch is found, it is flagged to ensure absolute mathematical accuracy.
 
-Classification of Knee OA was studied here [@guida2021knee]
+The pipeline is benchmarked against standard industry metrics to prove its effectiveness in handling complex financial documents.
 
 ## Methods
 
