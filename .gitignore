@@ -4,3 +4,4 @@
 .Ruserdata
 Tech_Doc.md
 implementation_plan.md
+tests/*
