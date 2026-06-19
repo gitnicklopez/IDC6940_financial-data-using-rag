@@ -24,9 +24,12 @@ def index_naive_chunks(text: str, chunk_size: int = 512, chunk_overlap: int = 50
     Returns:
         list[dict]: List of indexed chunks.
     '''
+    
+    # Split text into tokens
     tokens = text.split()
     chunks = []
 
+    # Create chunks with overlap
     for i in range(0, len(tokens) - chunk_overlap, chunk_size - chunk_overlap):
         chunk = tokens[i:i + chunk_size]
         chunks.append({"text": " ".join(chunk), "metadata": {"source": "naive", "page": "unknown"}})
@@ -45,6 +48,7 @@ def index_table_aware_rows(parsed_data: dict) -> dict:
     Returns:
         dict: Dictionary containing 'text' and 'tables'.
     '''
+    # Initialize metadata variables
     table_aware_text = []
     
     # Chunk continuous narrative prose standardly
@@ -54,6 +58,7 @@ def index_table_aware_rows(parsed_data: dict) -> dict:
             continue
             
         header_line = lines[0]
+
         # Extract page number (e.g. from "--- Page 1 (Text) ---")
         page_num = "unknown"
         if "Page" in header_line:
@@ -61,18 +66,22 @@ def index_table_aware_rows(parsed_data: dict) -> dict:
                 page_num = header_line.split("Page")[1].split("(")[0].strip()
             except Exception:
                 pass
-                
+
+        # Get the content of the block (excluding the header)
         block_content = "\n".join(lines[1:])
         tokens = block_content.split()
         
+        # Set chunk size and overlap (might need to change to parameters later)
         chunk_size = 512
         chunk_overlap = 50
         
+        # Create chunks with overlap
         if len(tokens) <= chunk_size:
             table_aware_text.append({
                 "text": block_content,
                 "metadata": {"source": "table_aware_text", "page": page_num}
             })
+        # Create chunks with overlap if text is longer than chunk size
         else:
             for i in range(0, len(tokens) - chunk_overlap, chunk_size - chunk_overlap):
                 chunk = tokens[i:i + chunk_size]
@@ -93,6 +102,7 @@ def index_table_aware_rows(parsed_data: dict) -> dict:
         page_num = "unknown"
         header_line = lines[0]
         if "Page" in header_line:
+            # Try to extract table ID and page number
             try:
                 parts = header_line.replace("-", "").strip().split()
                 # Expected parts: ["Page", "35", "Table", "1"]
@@ -102,6 +112,7 @@ def index_table_aware_rows(parsed_data: dict) -> dict:
                     page_num = parts[p_idx + 1]
                     table_num = parts[t_idx + 1]
                     table_id = f"Page_{page_num}_Table_{table_num}"
+            # Extract table ID and page number
             except Exception:
                 table_id = header_line.replace("-", "").strip().replace(" ", "_")
                 

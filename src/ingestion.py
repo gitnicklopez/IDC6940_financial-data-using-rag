@@ -20,27 +20,34 @@ def parse_document_linear(pdf_path: str) -> Dict[str, Any]:
     Reads the entire PDF and returns a dictionary with continuous text string
     and extraction metadata. Tables are flattened into the stream without structural preservation.
 
-    Args:
+    **Args**:
         pdf_path (str): Path to the PDF document.
 
-    Returns:
+    **Returns**:
         Dict[str, Any]: Dictionary containing 'text' and 'metadata'.
     """
+    # Initialize metadata variables
     full_text = ""
     num_pages = 0
     num_text_blocks = 0
     
+    # Open PDF file for reading
     try:
         with pdfplumber.open(pdf_path) as pdf:
+            # Set number of pages
             num_pages = len(pdf.pages)
+            # Iterate through each page in the PDF
             for page in pdf.pages:
-                page_text = page.extract_text(x_tolerance=3)
+                # Extract text from the current page
+                page_text = page.extract_text(x_tolerance=3) # Added x_tolerance=3 for word spacing
                 if page_text:
-                    full_text += page_text + "\n--- Page Break ---\n"
+                    full_text += page_text + "\n--- Page Break ---\n" # Added page break between pages
                     num_text_blocks += 1
+    
     except Exception as e:
         print(f"Error reading {pdf_path}: {e}")
-        
+
+    # Return full text and metadata    
     return {
         "text": full_text,
         "metadata": {
@@ -59,12 +66,14 @@ def parse_document_table_aware(pdf_path: str) -> Dict[str, Any]:
     Returns a dictionary with 'text' blocks, 'tables' (as formatted strings),
     and extraction metadata.
 
-    Args:
+    **Args**:
         pdf_path (str): Path to the PDF document.
 
-    Returns:
+    **Returns**:
         Dict[str, Any]: Dictionary containing 'text', 'tables', and 'metadata'.
     """
+    data.['table'][0]
+    # Initialize metadata variables
     data: Dict[str, Any] = {
         "text": [],
         "tables": [],
@@ -77,10 +86,13 @@ def parse_document_table_aware(pdf_path: str) -> Dict[str, Any]:
         }
     }
     
+    # Open PDF file for reading
     try:
         with pdfplumber.open(pdf_path) as pdf:
+            # Set number of pages
             num_pages = len(pdf.pages)
             data["metadata"]["num_pages"] = num_pages
+            # Set number of documents
             if num_pages > 0:
                 data["metadata"]["num_documents"] = 1
                 
