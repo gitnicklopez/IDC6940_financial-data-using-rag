@@ -72,7 +72,6 @@ def parse_document_table_aware(pdf_path: str) -> Dict[str, Any]:
     **Returns**:
         Dict[str, Any]: Dictionary containing 'text', 'tables', and 'metadata'.
     """
-    data.['table'][0]
     # Initialize metadata variables
     data: Dict[str, Any] = {
         "text": [],
