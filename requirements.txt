@@ -3,3 +3,6 @@ rank-bm25
 numpy
 pytest
 tabulate
+pandas
+matplotlib
+seaborn
