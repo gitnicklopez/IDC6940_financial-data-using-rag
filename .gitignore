@@ -2,8 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
-Tech_Doc.md
-implementation_plan.md
+artifacts/*
 tests/*
 .vscode/*
 .Renviron

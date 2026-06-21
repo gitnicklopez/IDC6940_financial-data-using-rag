@@ -1,3 +1,11 @@
+'''
+This script generates a CSV file containing statistics about the ingested documents.
+
+Functions:
+    - main(): Main function to generate corpus statistics.
+        - Inputs: None
+        - Outputs: CSV file containing statistics about the ingested documents.
+'''
 import os
 import sys
 import csv
@@ -9,7 +17,7 @@ from src.ingestion import parse_document_table_aware
 from src.indexing import index_table_aware_rows
 
 def main():
-    docs_dir = os.path.join(os.path.dirname(__file__), "..", "data", "Financial_Docs")
+    docs_dir = os.path.join(os.path.dirname(__file__), "..", "data", "corpus")
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
     os.makedirs(data_dir, exist_ok=True)
     
@@ -25,10 +33,10 @@ def main():
         print(f"Processing {pdf_file}...")
         pdf_path = os.path.join(docs_dir, pdf_file)
         
-        # 1. Parse Document
+        # Parse Document
         parsed_data = parse_document_table_aware(pdf_path)
         
-        # 2. Index to get chunk counts
+        # Index to get chunk counts
         indexed_data = index_table_aware_rows(parsed_data)
         
         # Extract Fiscal Year from filename (e.g., 'UWF-Financial-Statement-FY-20-21.pdf' -> 'FY 20-21')

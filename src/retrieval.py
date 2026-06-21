@@ -2,6 +2,14 @@
 Retrieves and reconstructs candidate documents relative to a query.
 
 Functions:
+- tokenize(text: str) -> list:
+    Purpose: Tokenizes a string into a list of lowercase alphanumeric words.
+- compute_bm25_scores(query: str, corpus: list, k1: float = 1.5, b: float = 0.75) -> list:
+    Purpose: Computes BM25 scores for a list of document dicts.
+- parse_srse_row(srse_text: str) -> tuple:
+    Purpose: Parses an SRSE formatted row string into headers and values.
+- reconstruct_table(table_id: str, table_row_index: list) -> str:
+    Purpose: Reconstructs the full table in Markdown format using all row chunks matching table_id.
 - retrieve_naive(query: str, indexed_chunks: list[dict], top_k: int = 5) -> list[dict]:
     Purpose: Executes a standard nearest-neighbor semantic search (using lightweight TF-IDF, embeddings, 
     or string overlap) over the flat naive chunks.

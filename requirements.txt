@@ -6,3 +6,4 @@ tabulate
 pandas
 matplotlib
 seaborn
+plotly
