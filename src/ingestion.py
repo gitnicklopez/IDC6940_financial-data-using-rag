@@ -108,9 +108,13 @@ def parse_document_table_aware(pdf_path: str) -> Dict[str, Any]:
                     data["metadata"]["num_tables"] += 1
                     data["metadata"]["num_rows"] += len(table)
                     
-                    # Convert the table list-of-lists into a readable Markdown/string format
-                    # Include some metadata about its location
-                    header = "\n".join([" | ".join(map(str, row)) for row in table])
+                    # Clean internal newlines from cells so they don't break our line-by-line parsing later
+                    clean_rows = []
+                    for row in table:
+                        clean_cells = [str(cell).replace('\n', ' ') if cell is not None else "" for cell in row]
+                        clean_rows.append(" | ".join(clean_cells))
+                    
+                    header = "\n".join(clean_rows)
                     table_str = f"--- Page {i+1} Table {t_idx+1} ---\n{header}\n"
                     data["tables"].append(table_str)
                     

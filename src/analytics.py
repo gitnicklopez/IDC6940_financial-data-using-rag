@@ -13,8 +13,8 @@ import csv
 # Add the project root directory to the python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.ingestion import parse_document_table_aware
-from src.indexing import index_table_aware_rows
+from src.ingestion import parse_document_table_aware, parse_document_linear
+from src.indexing import index_table_aware_rows, index_naive_chunks
 
 def main():
     docs_dir = os.path.join(os.path.dirname(__file__), "..", "data", "corpus")
@@ -48,6 +48,10 @@ def main():
         
         metadata = parsed_data.get("metadata", {})
         
+        # Parse and Index Naive
+        linear_data = parse_document_linear(pdf_path)
+        naive_chunks = index_naive_chunks(linear_data.get("text", ""))
+        
         stat = {
             "Filename": pdf_file,
             "Fiscal_Year": fy,
@@ -56,7 +60,8 @@ def main():
             "Total_Tables": metadata.get("num_tables", 0),
             "Total_Table_Rows": metadata.get("num_rows", 0),
             "Narrative_Chunks": len(indexed_data.get("text", [])),
-            "SRSE_Chunks": len(indexed_data.get("tables", []))
+            "SRSE_Chunks": len(indexed_data.get("tables", [])),
+            "Naive_Chunks": len(naive_chunks)
         }
         results.append(stat)
         
