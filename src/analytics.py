@@ -9,26 +9,37 @@ Functions:
 import os
 import sys
 import csv
+from src.ingestion import parse_document_table_aware, parse_document_linear
+from src.indexing import index_table_aware_rows, index_naive_chunks
 
 # Add the project root directory to the python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.ingestion import parse_document_table_aware, parse_document_linear
-from src.indexing import index_table_aware_rows, index_naive_chunks
-
 def main():
+    '''
+    Generates a CSV file containing statistics about the ingested documents.
+
+    Outputs:
+        corpus_statistics.csv: CSV file containing statistics about the ingested documents.
+    '''
+    # Set up directory paths
     docs_dir = os.path.join(os.path.dirname(__file__), "..", "data", "corpus")
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
     os.makedirs(data_dir, exist_ok=True)
     
+    # Set up CSV path
     csv_path = os.path.join(data_dir, "corpus_statistics.csv")
     
+    # Get list of PDF files
     pdf_files = [f for f in os.listdir(docs_dir) if f.endswith(".pdf")]
+    
     # Sort files so FY goes in order
     pdf_files.sort()
     
+    # Initialize results list
     results = []
     
+    # Process each PDF file
     for pdf_file in pdf_files:
         print(f"Processing {pdf_file}...")
         pdf_path = os.path.join(docs_dir, pdf_file)
