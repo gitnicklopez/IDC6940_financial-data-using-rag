@@ -11,6 +11,7 @@ Funtions:
 - _format_row_as_srse(row_cells: list, headers: list, table_id: str) -> str
     - Purpose: Formats cell sequences into metadata-rich strings to bind column definitions to values.
 '''
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 def index_naive_chunks(text: str, chunk_size: int = 512, chunk_overlap: int = 50) -> list[dict]:
     '''
@@ -24,15 +25,17 @@ def index_naive_chunks(text: str, chunk_size: int = 512, chunk_overlap: int = 50
     Returns:
         list[dict]: List of indexed chunks.
     '''
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        length_function=lambda x: len(x.split()),
+        separators=["\n\n", "\n", " ", ""]
+    )
     
-    # Split text into tokens
-    tokens = text.split()
+    split_texts = splitter.split_text(text)
     chunks = []
-
-    # Create chunks with overlap
-    for i in range(0, len(tokens) - chunk_overlap, chunk_size - chunk_overlap):
-        chunk = tokens[i:i + chunk_size]
-        chunks.append({"text": " ".join(chunk), "metadata": {"source": "naive", "page": "unknown"}})
+    for chunk_text in split_texts:
+        chunks.append({"text": chunk_text, "metadata": {"source": "naive", "page": "unknown"}})
     
     return chunks
 
@@ -50,6 +53,14 @@ def index_table_aware_rows(parsed_data: dict) -> dict:
     '''
     # Initialize metadata variables
     table_aware_text = []
+    
+    # Define splitter for words
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=512,
+        chunk_overlap=50,
+        length_function=lambda x: len(x.split()),
+        separators=["\n\n", "\n", " ", ""]
+    )
     
     # Chunk continuous narrative prose standardly
     for text_block in parsed_data.get("text", []):
@@ -69,26 +80,13 @@ def index_table_aware_rows(parsed_data: dict) -> dict:
 
         # Get the content of the block (excluding the header)
         block_content = "\n".join(lines[1:])
-        tokens = block_content.split()
         
-        # Set chunk size and overlap (might need to change to parameters later)
-        chunk_size = 512
-        chunk_overlap = 50
-        
-        # Create chunks with overlap
-        if len(tokens) <= chunk_size:
+        split_texts = splitter.split_text(block_content)
+        for chunk_text in split_texts:
             table_aware_text.append({
-                "text": block_content,
+                "text": chunk_text,
                 "metadata": {"source": "table_aware_text", "page": page_num}
             })
-        # Create chunks with overlap if text is longer than chunk size
-        else:
-            for i in range(0, len(tokens) - chunk_overlap, chunk_size - chunk_overlap):
-                chunk = tokens[i:i + chunk_size]
-                table_aware_text.append({
-                    "text": " ".join(chunk),
-                    "metadata": {"source": "table_aware_text", "page": page_num}
-                })
 
     # Extract and format table rows using SRSE
     table_chunks = []

@@ -9,11 +9,12 @@ Functions:
 import os
 import sys
 import csv
-from src.ingestion import parse_document_table_aware, parse_document_linear
-from src.indexing import index_table_aware_rows, index_naive_chunks
 
 # Add the project root directory to the python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from src.ingestion import parse_document_table_aware, parse_document_linear
+from src.indexing import index_table_aware_rows, index_naive_chunks
 
 def main():
     '''
