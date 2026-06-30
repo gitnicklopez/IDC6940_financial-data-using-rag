@@ -111,8 +111,7 @@ from src.retrieval import tokenize
 
 original_query = "Operating Revenue: $110M"
 tokenized_query = tokenize(original_query)
-print(f'Original query: {original_query}')
-print(f'Tokenized query: {tokenized_query}')
+print(f'Original query: {original_query}\nTokenized query: {tokenized_query}')
 ```
 
 Subsequent to the normalization of both the natural-language query and the document corpus, the pipeline executes a semantic comparison to evaluate the similarity between the two datasets using `compute_bm25_scores()`. We implement the `BM25Okapi` algorithm, sourced from the `rank_bm25` library, to calculate these relevance scores. This probabilistic model assigns a weight to each text segment based on term frequency and inverse document frequency, effectively prioritizing chunks that contain rare, highly descriptive keywords over those with common linguistic fillers. To refine the retrieval accuracy, the system exposes the `k1` and `b` hyperparameters. The `k1` parameter provides a saturation function that dampens the influence of term frequency; this prevents a segment from being disproportionately weighted simply because a query term appears multiple times. Furthermore, the `b` parameter introduces length normalization, adjusting the score to ensure that expansive text blocks do not dominate the results simply by virtue of their larger word counts, thereby maintaining parity across varying chunk dimensions.
