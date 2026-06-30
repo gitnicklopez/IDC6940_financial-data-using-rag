@@ -25,6 +25,7 @@ def index_naive_chunks(text: str, chunk_size: int = 512, chunk_overlap: int = 50
     Returns:
         list[dict]: List of indexed chunks.
     '''
+    # Create a splitter for text
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -32,7 +33,10 @@ def index_naive_chunks(text: str, chunk_size: int = 512, chunk_overlap: int = 50
         separators=["\n\n", "\n", " ", ""]
     )
     
+    # Split text into tokens
     split_texts = splitter.split_text(text)
+    
+    # Add chunks to list
     chunks = []
     for chunk_text in split_texts:
         chunks.append({"text": chunk_text, "metadata": {"source": "naive", "page": "unknown"}})
