@@ -1,48 +1,51 @@
+"""
+This module implements the RAG pipeline for ingesting and indexing PDF documents.
+"""
 import os
-from google import genai
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+from src.ingestion import parse_document_linear, parse_document_table_aware
+from src.indexing import index_naive_chunks, index_table_aware_rows
 
-def run_pipeline(pdf_dir: str, mock: bool = True) -> dict:
+def run_pipeline(pdf_dir: str) -> dict:
     """
-    Placeholder run_pipeline function to prevent import failures.
-    """
-    return {}
-
-def generate_response(prompt: str, context: str) -> str:
-    """
-    Generates a response using the Gemini LLM based on the provided context.
-
-    Args:
-        prompt (str): The question to ask the LLM.
-        context (str): The context to use for answering the question.
-
-    Returns:
-        str: The response from the LLM.
-    """
-    # Get API key and initialize client
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable not found. Please set it in your .env file.")
-
-    # Initialize the Gemini client    
-    client = genai.Client(api_key=api_key)
+    Ingests and indexes all PDF documents in the specified directory.
     
-    # Construct the prompt for the LLM
-    final_prompt = f"""You are a helpful assistant analyzing financial documents.
-        Answer the user's question using only the provided context. 
-        If the answer is not in the context, say "I cannot answer this based on the provided documents."
-        Context:
-        {context}
-        Question:
-        {prompt}
+    Args:
+        pdf_dir (str): Directory containing the PDF files.
+    
+    Returns:
+        dict: A dictionary containing the naive, text, and table row indices.
     """
-    # Call the Gemini API
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=final_prompt
-    )
-    # Return the response text
-    return response.text
+    # Check if the directory exists
+    if not os.path.isdir(pdf_dir):
+        raise ValueError(f"The directory {pdf_dir} does not exist.")
+
+    # Initialize indices
+    naive_index = []
+    text_index = []
+    table_row_index = []
+    
+    # Process each PDF file in the directory for each RAG pipeline
+    for filename in os.listdir(pdf_dir):
+        if filename.lower().endswith(".pdf"):
+            pdf_path = os.path.join(pdf_dir, filename)
+            
+            # --- Naive Pipeline ---
+            linear_data = parse_document_linear(pdf_path)
+            naive_chunks = index_naive_chunks(linear_data.get("text", ""))
+            naive_index.extend(naive_chunks)
+            
+            # --- Table-Aware Pipeline ---
+            parsed_data = parse_document_table_aware(pdf_path)
+            indexed_data = index_table_aware_rows(parsed_data)
+            
+            text_index.extend(indexed_data.get("text", []))
+            table_row_index.extend(indexed_data.get("tables", []))
+
+    return {
+        "naive_index": naive_index,
+        "text_index": text_index,
+        "table_row_index": table_row_index
+    }
+
+
