@@ -87,7 +87,6 @@ The first step of this process is to ingest each PDF in the corpus. We do this b
 **Naive RAG Flattened Text:**
 *"Year Debt Assets 2025 $450M $800M 2026 $440M $816M"*
 
-
 While the numerical data may appear near the temporal label "2026," the pipeline provides no semantic link between "Year" and "2026," "Debt" and "$450M," or "Assets" and "$800M."
 
 #### Step 2: Indexing

@@ -9,3 +9,5 @@ seaborn
 plotly
 jupyter
 langchain-text-splitters
+google-genai
+python-dotenv
