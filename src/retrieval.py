@@ -248,7 +248,8 @@ def retrieve_table_aware(query: str, text_index: list, table_row_index: list, to
                     "metadata": {
                         "source": "reconstructed_table",
                         "table_id": table_id,
-                        "page": metadata.get("page", "unknown")
+                        "page": metadata.get("page", "unknown"),
+                        "filename": metadata.get("filename", "unknown")
                     }
                 }
                 retrieved_results.append(reconstructed_chunk)

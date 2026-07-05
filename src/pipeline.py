@@ -41,14 +41,24 @@ def run_pipeline(pdf_dir: str) -> dict:
             # --- Naive Pipeline ---
             linear_data = parse_document_linear(pdf_path)
             naive_chunks = index_naive_chunks(linear_data.get("text", ""))
+            for chunk in naive_chunks:
+                chunk["metadata"]["filename"] = filename
             naive_index.extend(naive_chunks)
             
             # --- Table-Aware Pipeline ---
             parsed_data = parse_document_table_aware(pdf_path)
             indexed_data = index_table_aware_rows(parsed_data)
             
-            text_index.extend(indexed_data.get("text", []))
-            table_row_index.extend(indexed_data.get("tables", []))
+            text_chunks = indexed_data.get("text", [])
+            table_chunks = indexed_data.get("tables", [])
+            
+            for chunk in text_chunks:
+                chunk["metadata"]["filename"] = filename
+            for chunk in table_chunks:
+                chunk["metadata"]["filename"] = filename
+                
+            text_index.extend(text_chunks)
+            table_row_index.extend(table_chunks)
 
     return {
         "naive_index": naive_index,

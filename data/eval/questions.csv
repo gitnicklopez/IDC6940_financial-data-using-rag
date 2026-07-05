@@ -1,61 +1,61 @@
-﻿Q_ID,Tier,Question
-T1-01,Tier 1 (TFV),What was UWF's net student tuition and fees revenue in FY2021-22?
-T1-02,Tier 1 (TFV),What were UWF's total operating expenses in FY2020-21?
-T1-03,Tier 1 (TFV),"What was UWF's total net position at June 30, 2023?"
-T1-04,Tier 1 (TFV),What was UWF's cash and cash equivalents at the end of FY2021-22?
-T1-05,Tier 1 (TFV),What was UWF's compensation and employee benefits expense in FY2023-24?
-T1-06,Tier 1 (TFV),What were UWF's state noncapital appropriations in FY2020-21?
-T1-07,Tier 1 (TFV),What was UWF's grants and contracts revenue in FY2022-23?
-T1-08,Tier 1 (TFV),What were UWF's scholarships and fellowships expenses in FY2024-25?
-T1-09,Tier 1 (TFV),"What were UWF's net capital assets at June 30, 2022?"
-T1-10,Tier 1 (TFV),"What were UWF's total liabilities at June 30, 2024?"
-T1-11,Tier 1 (TFV),What were UWF's auxiliary enterprises revenues in FY2024-25?
-T1-12,Tier 1 (TFV),What was UWF's federal and state student financial aid in FY2021-22?
-T1-13,Tier 1 (TFV),What was UWF's utilities expense in FY2023-24?
-T1-14,Tier 1 (TFV),"What were UWF's total assets at June 30, 2022?"
-T1-15,Tier 1 (TFV),"What were UWF's net capital assets at June 30, 2025?"
-T1-16,Tier 1 (TFV),What were UWF's services and supplies expenses in FY2022-23?
-T1-17,Tier 1 (TFV),What was UWF's net increase in net position in FY2023-24?
-T1-18,Tier 1 (TFV),What was UWF's federal and state student financial aid in FY2024-25?
-T1-19,Tier 1 (TFV),"What were UWF's current assets at June 30, 2024?"
-T1-20,Tier 1 (TFV),"What was UWF's buildings net book value at June 30, 2023?"
-T2-01,Tier 2 (Extract),What was UWF's total operating revenues for FY2020-21?
-T2-02,Tier 2 (Extract),"What was UWF's total net position at June 30, 2024?"
-T2-03,Tier 2 (Extract),What was UWF's compensation and employee benefits expense in FY2022-23?
-T2-04,Tier 2 (Extract),What were UWF's net student tuition and fees in FY2023-24?
-T2-05,Tier 2 (Extract),What was UWF's cash and cash equivalents at end of FY2023-24?
-T2-06,Tier 2 (Extract),"What was UWF's net capital assets at June 30, 2021?"
-T2-07,Tier 2 (Extract),What was UWF's state noncapital appropriations in FY2022-23?
-T2-08,Tier 2 (Extract),"What was UWF's total assets at June 30, 2025?"
-T2-09,Tier 2 (Extract),What was UWF's depreciation expense in FY2021-22?
-T2-10,Tier 2 (Extract),What was UWF's services and supplies expense in FY2023-24?
-T2-11,Tier 2 (Extract),What was UWF's grants and contracts revenue in FY2024-25?
-T2-12,Tier 2 (Extract),"What were UWF's current assets at June 30, 2023?"
-T2-13,Tier 2 (Extract),What was UWF's total operating revenues for FY2019-20?
-T2-14,Tier 2 (Extract),What was UWF's utilities expense in FY2021-22?
-T2-15,Tier 2 (Extract),What was UWF's state noncapital appropriations in FY2024-25?
-T2-16,Tier 2 (Extract),"What was UWF's total net position at June 30, 2022?"
-T2-17,Tier 2 (Extract),What was UWF's federal and state student financial aid in FY2020-21?
-T2-18,Tier 2 (Extract),"What was UWF's total liabilities at June 30, 2025?"
-T2-19,Tier 2 (Extract),What were UWF's auxiliary enterprises revenues in FY2022-23?
-T2-20,Tier 2 (Extract),What was UWF's cash and cash equivalents at end of FY2020-21?
-T3-01,Tier 3 (Reason),What was the increase in UWF's net student tuition and fees from FY2020-21 to FY2021-22?
-T3-02,Tier 3 (Reason),What was UWF's operating loss in FY2022-23 (total operating revenues minus total operating expenses)?
-T3-03,Tier 3 (Reason),"What was the total change in UWF's net position from June 30, 2021 to June 30, 2024?"
-T3-04,Tier 3 (Reason),What was the combined scholarships and fellowships expense for UWF in FY2022-23 and FY2023-24?
-T3-05,Tier 3 (Reason),"In FY2023-24, what was the difference between UWF's state noncapital appropriations and federal/state student financial aid?"
-T3-06,Tier 3 (Reason),By how much did UWF's total operating expenses increase from FY2021-22 to FY2024-25?
-T3-07,Tier 3 (Reason),What was the sum of UWF's year-end cash for FY2021-22 and FY2022-23 combined?
-T3-08,Tier 3 (Reason),How much did UWF's total net position grow from the end of FY2021-22 to the end of FY2022-23?
-T3-09,Tier 3 (Reason),What was UWF's combined compensation expense across FY2023-24 and FY2024-25?
-T3-10,Tier 3 (Reason),"What was UWF's total liabilities minus total net position at June 30, 2023?"
-T3-11,Tier 3 (Reason),What was the difference in UWF's grants and contracts revenue between FY2024-25 and FY2020-21?
-T3-12,Tier 3 (Reason),"In FY2024-25, what was UWF's total operating expenses minus total operating revenues?"
-T3-13,Tier 3 (Reason),What was the increase in UWF's state noncapital appropriations from FY2020-21 to FY2022-23?
-T3-14,Tier 3 (Reason),What was UWF's operating loss in FY2024-25 (total operating expenses minus total operating revenues)?
-T3-15,Tier 3 (Reason),What was the combined grants and contracts revenue for UWF in FY2022-23 and FY2023-24?
-T3-16,Tier 3 (Reason),What was the change in UWF's depreciation expense from FY2019-20 to FY2024-25?
-T3-17,Tier 3 (Reason),What was the combined total operating revenues of UWF for FY2023-24 and FY2024-25?
-T3-18,Tier 3 (Reason),"What was the difference in UWF's total net position between June 30, 2022 and June 30, 2025?"
-T3-19,Tier 3 (Reason),What was UWF's combined services and supplies expense for FY2021-22 and FY2022-23?
-T3-20,Tier 3 (Reason),What was UWF's cash at end of FY2024-25 minus cash at end of FY2021-22?
+Q_ID,Tier,corpus_file,Question,Expected_Table_ID,Expected_Answer
+T2-13,Tier 2 (Extract),UWF-Financial-Statement-FY-20-21.pdf,What was UWF's total operating revenues for FY2019-20?,Page_12,"$79,622,000|$79,622 thousand|$79.6 million"
+T1-02,Tier 1 (TFV),UWF-Financial-Statement-FY-20-21.pdf,What were UWF's total operating expenses in FY2020-21?,Page_13,"$243,803,000|$243,803 thousand|$243.8 million"
+T1-06,Tier 1 (TFV),UWF-Financial-Statement-FY-20-21.pdf,What were UWF's state noncapital appropriations in FY2020-21?,Page_14,"$86,909,000|$86,909 thousand|$86.9 million"
+T2-01,Tier 2 (Extract),UWF-Financial-Statement-FY-20-21.pdf,What was UWF's total operating revenues for FY2020-21?,Page_12,"$84,893,000|$84,893 thousand|$84.9 million"
+T2-06,Tier 2 (Extract),UWF-Financial-Statement-FY-20-21.pdf,"What was UWF's net capital assets at June 30, 2021?",Page_10,"$172,160,000|$172,160 thousand|$172.2 million"
+T2-17,Tier 2 (Extract),UWF-Financial-Statement-FY-20-21.pdf,What was UWF's federal and state student financial aid in FY2020-21?,Page_21,"$39,553,872|$39,554 thousand|$39.6 million"
+T2-20,Tier 2 (Extract),UWF-Financial-Statement-FY-20-21.pdf,What was UWF's cash and cash equivalents at end of FY2020-21?,Page_16,"$10,504,706|$10,505 thousand|$10.5 million"
+T3-14,Tier 3 (Reason),UWF-Financial-Statement-FY-20-21.pdf,What was UWF's operating loss in FY2020-21 (total operating expenses minus total operating revenues)?,Page_21,"$158,909,595|$158,910 thousand|$158.9 million"
+T3-13,Tier 3 (Reason),"UWF-Financial-Statement-FY-20-21.pdf, UWF-Financial-Statement-FY-22-23.pdf",What was the increase in UWF's state noncapital appropriations from FY2020-21 to FY2022-23?,"Page_14, Page_15","$11,940,000|$11,940 thousand|$11.9 million"
+T3-03,Tier 3 (Reason),"UWF-Financial-Statement-FY-20-21.pdf, UWF-Financial-Statement-FY-23-24.pdf","What was the total change in UWF's total net position from June 30, 2021 to June 30, 2024?","Page_19, Page_23","$80,718,127|$80,718 thousand|$80.7 million"
+T3-16,Tier 3 (Reason),"UWF-Financial-Statement-FY-20-21.pdf, UWF-Financial-Statement-FY-24-25.pdf",What was the change in UWF's depreciation expense from FY2019-20 to FY2024-25?,"Page_23, Page_27","$253,904|$254 thousand"
+T3-11,Tier 3 (Reason),"UWF-Financial-Statement-FY-20-21.pdf, UWF-Financial-Statement-FY-24-25.pdf",What was the difference in UWF's grants and contracts revenue between FY2024-25 and FY2020-21?,"Page_12, Page_14","$7,788,000|$7,788 thousand|$7.788 million"
+T3-01,Tier 3 (Reason),UWF-Financial-Statement-FY-21-22.pdf,What was the increase in UWF's net student tuition and fees from FY2020-21 to FY2021-22?,Page_12,"$2,640,000|$2,640 thousand|$2.6 million"
+T1-01,Tier 1 (TFV),UWF-Financial-Statement-FY-21-22.pdf,What was UWF's net student tuition and fees revenue in FY2021-22?,Page_12,"$64,161,000|$64,161 thousand|$64.2 million"
+T1-04,Tier 1 (TFV),UWF-Financial-Statement-FY-21-22.pdf,What was UWF's cash and cash equivalents at the end of FY2021-22?,Page_22,"$12,969,110|$12,969 thousand|$13 million"
+T1-09,Tier 1 (TFV),UWF-Financial-Statement-FY-21-22.pdf,"What were UWF's net capital assets at June 30, 2022?",Page_17,"$169,428,000|$169,428 thousand|$169.4 million"
+T1-12,Tier 1 (TFV),UWF-Financial-Statement-FY-21-22.pdf,What was UWF's federal and state student financial aid in FY2021-22?,Page_21,"$52,847,024|$52,847 thousand|$52.8 million"
+T1-14,Tier 1 (TFV),UWF-Financial-Statement-FY-21-22.pdf,"What were UWF's total assets at June 30, 2022?",Page_18,"$294,625,980|$294,626 thousand|$295 million"
+T2-09,Tier 2 (Extract),UWF-Financial-Statement-FY-21-22.pdf,What was UWF's depreciation expense in FY2021-22?,Page_53,"$3,708,492|$3,708 thousand|$3.7 million"
+T2-14,Tier 2 (Extract),UWF-Financial-Statement-FY-21-22.pdf,What was UWF's utilities expense in FY2021-22?,Page_21,"$4,143,549|$4,143 thousand|$4.1 million"
+T2-16,Tier 2 (Extract),UWF-Financial-Statement-FY-21-22.pdf,"What was UWF's total net position at June 30, 2022?",Page_19,"$95,662,208|$95,662 thousand|$95.7 million"
+T3-06,Tier 3 (Reason),"UWF-Financial-Statement-FY-21-22.pdf, UWF-Financial-Statement-FY-24-25.pdf",By how much did UWF's total operating expenses increase from FY2021-22 to FY2024-25?,"Page_51, Page_56","$69,399,065|$69,399 thousand|$69.4 million"
+T3-18,Tier 3 (Reason),"UWF-Financial-Statement-FY-21-22.pdf, UWF-Financial-Statement-FY-24-25.pdf","What was the difference in UWF's total net position between June 30, 2022 and June 30, 2025?","Page_19, Page_23","$96,195,070|$96,195 thousand|$96.2 million"
+T3-20,Tier 3 (Reason),"UWF-Financial-Statement-FY-21-22.pdf, UWF-Financial-Statement-FY-24-25.pdf",What was UWF's cash at end of FY2024-25 minus cash at end of FY2021-22?,"Page_16, Page_18","-$3,419,000|-$3,419 thousand|-$3.4 million"
+T3-19,Tier 3 (Reason),UWF-Financial-Statement-FY-22-23.pdf,What was UWF's combined services and supplies expense for FY2021-22 and FY2022-23?,Page_14,"$115,272,000|$115,272 thousand|$115.3 million"
+T3-07,Tier 3 (Reason),UWF-Financial-Statement-FY-22-23.pdf,What was the sum of UWF's year-end cash for FY2021-22 and FY2022-23 combined?,Page_16,"$21,992,000|$21,992 thousand|$22 million"
+T3-08,Tier 3 (Reason),UWF-Financial-Statement-FY-22-23.pdf,How much did UWF's total net position grow from the end of FY2021-22 to the end of FY2022-23?,Page_12,"$29,591,000|$29,591 thousand|$29.6 million"
+T1-03,Tier 1 (TFV),UWF-Financial-Statement-FY-22-23.pdf,"What was UWF's total net position at June 30, 2023?",Page_11,"$125,253,227|$125,253 thousand|$125.3 million"
+T1-07,Tier 1 (TFV),UWF-Financial-Statement-FY-22-23.pdf,What was UWF's grants and contracts revenue in FY2022-23?,Page_13,"$21,101,000|$21,101 thousand|$21.1 million"
+T1-16,Tier 1 (TFV),UWF-Financial-Statement-FY-22-23.pdf,What were UWF's services and supplies expenses in FY2022-23?,Page_23,"$59,903,894|$59,904 thousand|$59.9 million"
+T1-20,Tier 1 (TFV),UWF-Financial-Statement-FY-22-23.pdf,"What was UWF's buildings net book value at June 30, 2023?",Page_17,"$105,104,000|$105,104 thousand|$105.1 million"
+T2-03,Tier 2 (Extract),UWF-Financial-Statement-FY-22-23.pdf,What was UWF's compensation and employee benefits expense in FY2022-23?,Page_23,"$135,284,442|$135,284 thousand|$135.3 million"
+T2-07,Tier 2 (Extract),UWF-Financial-Statement-FY-22-23.pdf,What was UWF's state noncapital appropriations in FY2022-23?,Page_15,"$98,849,000|$98,849 thousand|$98.8 million"
+T2-12,Tier 2 (Extract),UWF-Financial-Statement-FY-22-23.pdf,"What were UWF's current assets at June 30, 2023?",Page_11,"$149,846,000|$149,846 thousand|$149.8 million"
+T2-19,Tier 2 (Extract),UWF-Financial-Statement-FY-22-23.pdf,What were UWF's auxiliary enterprises revenues in FY2022-23?,Page_13,"$6,431,285|$6,431 thousand|$6.4 million"
+T3-02,Tier 3 (Reason),UWF-Financial-Statement-FY-22-23.pdf,What was UWF's operating loss in FY2022-23 (total operating revenues minus total operating expenses)?,Page_12,"$137,393,000|$137,393 thousand|$137.4 million"
+T3-10,Tier 3 (Reason),UWF-Financial-Statement-FY-22-23.pdf,"What was UWF's total liabilities minus total net position at June 30, 2023?",Page_11,"$43,418,000|$43,418 thousand|$43.4 million"
+T3-04,Tier 3 (Reason),"UWF-Financial-Statement-FY-22-23.pdf, UWF-Financial-Statement-FY-23-24.pdf",What was the combined scholarships and fellowships expense for UWF in FY2022-23 and FY2023-24?,"Page_24, Page_26","$54,858,079|$54,859 thousand|$54.9 million"
+T3-15,Tier 3 (Reason),UWF-Financial-Statement-FY-23-24.pdf,What was the combined grants and contracts revenue for UWF in FY2022-23 and FY2023-24?,Page_14,"$44,020,000|$44,020 thousand|$44 million"
+T1-05,Tier 1 (TFV),UWF-Financial-Statement-FY-23-24.pdf,What was UWF's compensation and employee benefits expense in FY2023-24?,Page_16,"$159,870,000|$159,870 thousand|$159 million"
+T1-10,Tier 1 (TFV),UWF-Financial-Statement-FY-23-24.pdf,"What were UWF's total liabilities at June 30, 2024?",Page_23,"$185,351,213|$185,351 thousand|$185.3 million"
+T1-13,Tier 1 (TFV),UWF-Financial-Statement-FY-23-24.pdf,What was UWF's utilities expense in FY2023-24?,Page_25,"$3,834,965|$3,835 thousand|$3.8 million"
+T1-17,Tier 1 (TFV),UWF-Financial-Statement-FY-23-24.pdf,What was UWF's net increase in net position in FY2023-24?,Page_14,"$51,127,000|$51,127 thousand|$51.1 million"
+T1-19,Tier 1 (TFV),UWF-Financial-Statement-FY-23-24.pdf,"What were UWF's current assets at June 30, 2024?",Page_22,"$199,433,513|$199,434 thousand|$199.4 million"
+T2-02,Tier 2 (Extract),UWF-Financial-Statement-FY-23-24.pdf,"What was UWF's total net position at June 30, 2024?",Page_13,"$176,380,000|$176,380 thousand|$176.4 million"
+T2-04,Tier 2 (Extract),UWF-Financial-Statement-FY-23-24.pdf,What were UWF's net student tuition and fees in FY2023-24?,Page_14,"$77,408,000|$77,408 thousand|$77.4 million"
+T2-05,Tier 2 (Extract),UWF-Financial-Statement-FY-23-24.pdf,What was UWF's cash and cash equivalents at end of FY2023-24?,Page_18,"$8,235,594|$8,236 thousand|$8.2 million"
+T2-10,Tier 2 (Extract),UWF-Financial-Statement-FY-23-24.pdf,What was UWF's services and supplies expense in FY2023-24?,Page_16,"$65,874,000|$65,874 thousand|$65.9 million"
+T3-05,Tier 3 (Reason),UWF-Financial-Statement-FY-23-24.pdf,"In FY2023-24, what was the difference between UWF's state noncapital appropriations and federal/state student financial aid?",Page_17,"$103,253,000|$103,253 thousand|$103.3 million"
+T3-17,Tier 3 (Reason),"UWF-Financial-Statement-FY-23-24.pdf, UWF-Financial-Statement-FY-24-25.pdf",What was the combined total operating revenues of UWF for FY2023-24 and FY2024-25?,Page_14,"$235,523,000|$235,523 thousand|$253.5 million"
+T3-09,Tier 3 (Reason),UWF-Financial-Statement-FY-24-25.pdf,What was UWF's combined compensation expense across FY2023-24 and FY2024-25?,Page_16,"$332,210,000|$332,210 thousand|$332.2 million"
+T1-08,Tier 1 (TFV),UWF-Financial-Statement-FY-24-25.pdf,What were UWF's scholarships and fellowships expenses in FY2024-25?,Page_26,"$42,925,872|$42,926 thousand|$42.9 million"
+T1-11,Tier 1 (TFV),UWF-Financial-Statement-FY-24-25.pdf,What were UWF's auxiliary enterprises revenues in FY2024-25?,Page_25,"$7,220,532|$7,221 thousand|$7.2 million"
+T1-15,Tier 1 (TFV),UWF-Financial-Statement-FY-24-25.pdf,"What were UWF's net capital assets at June 30, 2025?",Page_13,"$171,104,000|$171,104 thousand|$171.1 million"
+T1-18,Tier 1 (TFV),UWF-Financial-Statement-FY-24-25.pdf,What was UWF's federal and state student financial aid in FY2024-25?,Page_25,"$38,206,003|$38,206 thousand|$38.2 million"
+T2-08,Tier 2 (Extract),UWF-Financial-Statement-FY-24-25.pdf,"What was UWF's total assets at June 30, 2025?",Page_13,"$397,656,000|$397,656 thousand|$397.7 million"
+T2-11,Tier 2 (Extract),UWF-Financial-Statement-FY-24-25.pdf,What was UWF's grants and contracts revenue in FY2024-25?,Page_14,"$26,086,000|$26,086 thousand|$26.1 million"
+T2-15,Tier 2 (Extract),UWF-Financial-Statement-FY-24-25.pdf,What was UWF's state noncapital appropriations in FY2024-25?,Page_17,"$135,413,000|$135,413 thousand|$135.4 million"
+T2-18,Tier 2 (Extract),UWF-Financial-Statement-FY-24-25.pdf,"What was UWF's total liabilities at June 30, 2025?",Page_44,"$203,848,566|$203,849 thousand|$203.8 million"
+T3-12,Tier 3 (Reason),UWF-Financial-Statement-FY-24-25.pdf,"In FY2024-25, what was UWF's total operating expenses minus total operating revenues?",Page_25,"$176,444,802|$176,445 thousand|$176.4 million"
