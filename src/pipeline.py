@@ -1,5 +1,13 @@
 """
 This module implements the RAG pipeline for ingesting and indexing PDF documents.
+
+Functions:
+- run_pipeline(pdf_dir: str) -> dict:
+    - Purpose: Ingests and indexes all PDF documents in the specified directory using both naive and table-aware pipelines.
+    - Args:
+        pdf_dir (str): Directory containing the PDF files.
+    - Returns:
+        dict: A dictionary containing the naive, text, and table row indices.
 """
 import os
 

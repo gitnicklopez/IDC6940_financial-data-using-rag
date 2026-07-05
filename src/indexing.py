@@ -43,7 +43,7 @@ def index_naive_chunks(text: str, chunk_size: int = 512, chunk_overlap: int = 50
     
     return chunks
 
-def index_table_aware_rows(parsed_data: dict) -> dict:
+def index_table_aware_rows(parsed_data: dict, chunk_size: int = 512, chunk_overlap: int = 50) -> dict:
     '''
     Separates indexing into two categories:
     1. Chunks continuous narrative prose standardly.
@@ -51,6 +51,8 @@ def index_table_aware_rows(parsed_data: dict) -> dict:
     
     Args:
         parsed_data (dict): Dictionary containing 'text' and 'tables'.
+        chunk_size (int): Maximum number of tokens per chunk.
+        chunk_overlap (int): Number of overlapping tokens between consecutive chunks.
 
     Returns:
         dict: Dictionary containing 'text' and 'tables'.
@@ -60,8 +62,8 @@ def index_table_aware_rows(parsed_data: dict) -> dict:
     
     # Define splitter for words
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=512,
-        chunk_overlap=50,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
         length_function=lambda x: len(x.split()),
         separators=["\n\n", "\n", " ", ""]
     )
@@ -96,6 +98,8 @@ def index_table_aware_rows(parsed_data: dict) -> dict:
     table_chunks = []
     for table_str in parsed_data.get("tables", []):
         lines = table_str.strip().split("\n")
+
+        # Skip empty or single-line tables
         if len(lines) < 2:
             continue
             
@@ -114,7 +118,7 @@ def index_table_aware_rows(parsed_data: dict) -> dict:
                     page_num = parts[p_idx + 1]
                     table_num = parts[t_idx + 1]
                     table_id = f"Page_{page_num}_Table_{table_num}"
-            # Extract table ID and page number
+            # Fallback: extract table id and page number
             except Exception:
                 table_id = header_line.replace("-", "").strip().replace(" ", "_")
                 
@@ -153,8 +157,13 @@ def _format_row_as_srse(row_cells: list, headers: list, table_id: str) -> str:
     Returns:
         str: Formatted metadata-rich string.
     '''
+    # Format the row as a metadata-rich string
     parts = [f"Table: {table_id}"]
+
+    # Add each cell as a key-value pair
     for i, cell in enumerate(row_cells):
         header_name = headers[i] if i < len(headers) else f"Col_{i+1}"
         parts.append(f"{header_name}: {cell}")
+    
+    # Return formatted metadata-rich string
     return " | ".join(parts)
