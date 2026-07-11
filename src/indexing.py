@@ -30,7 +30,7 @@ def index_naive_chunks(text: str, chunk_size: int = 512, chunk_overlap: int = 50
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
         length_function=lambda x: len(x.split()),
-        separators=["\n\n", "\n", " ", ""]
+        separators=[" ", ""]
     )
     
     # Split text into tokens

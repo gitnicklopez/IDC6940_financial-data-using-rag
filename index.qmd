@@ -54,7 +54,7 @@ The pipeline is benchmarked against standard industry metrics to prove its effec
 
 ## Methods
 
-To evaluate the impact of preserving document structure on retrieval accuracy, this study benchmarks two contrasting RAG pipelines on a corpus of annual financial statements. We contrast a standard naive RAG baseline (Architecture A), which flattens document layouts into linear text streams, against a Table-Aware Dual-Branch RAG pipeline (Architecture B), designed to isolate and process narrative and tabular elements down separate, optimized pathways. By evaluating both architectures against a validation suite of financial queries, we isolate the impact of layout preservation on numerical retrieval accuracy and context coherence.
+To evaluate the impact of preserving document structure on retrieval accuracy, this study benchmarks two contrasting RAG pipelines on a corpus of annual financial statements. We contrast a standard naive RAG baseline (**Architecture A**), which flattens document layouts into linear text streams, against a Table-Aware Dual-Branch RAG pipeline (**Architecture B**), designed to isolate and process narrative and tabular elements down separate, optimized pathways. By evaluating both architectures against a validation suite of financial queries, we isolate the impact of layout preservation on numerical retrieval accuracy and context coherence.
 
 ### Architecture A: Naive RAG
 
@@ -91,13 +91,13 @@ While the numerical data may appear near the temporal label "2026," the pipeline
 
 #### Step 2: Indexing
 
-The first step of the indexing process is to parse the flattened text into chunks. We do this using our `index_naive_chunks()` function. This process takes three parameters: `text`, `chunk_size`, and `chunk_overlap`. The flattened text from the ingestion process is passed to the `text` parameter. We can then define `chunk_size` and `chunk_overlap`, or use the default values of `512` and `50`, respectively. We use `RecursiveCharacterTextSplitter` from LangChain as our splitting algorithm. `chunk_size` is used as the upper limit for chunk size. In other words, a chunk will never be more than the defined `chunk_size`, but may be less. The `chunk_overlap` ensures that themes and ideas are not split between chunks, reducing the risk that meaningful context is not lost. We measure the length of each chunk by word count; this is defined in the `length_function`. The `separators` parameter provides a robust mechanism for controlling document fragmentation. By establishing a prioritized list of delimiters, we guide the algorithm on how to partition the content effectively. For instance, using the configuration `["\n\n", "\n", " ", ""]` prioritizes splits at double newlines to maintain section and paragraph integrity, followed by single newlines, then spaces, and eventually individual characters as a final resort. Following the initial text split, the `length_function` evaluates the dimensions of each chunk. If a segment exceeds the specified `chunk_size`, it undergoes further partitioning. This iterative process utilizes the separator hierarchy to subdivide the text until all chunks align with the required size constraints. Chunks are then added to a list and tagged with metadata from the source document.
+The first step of the indexing process is to parse the flattened text into chunks. We do this using our `index_naive_chunks`. This process takes three parameters: `text`, `chunk_size`, and `chunk_overlap`. The flattened text from the ingestion process is passed to the `text` parameter. We can then define `chunk_size` and `chunk_overlap`, or use the default values of `512` and `50`, respectively. We use `RecursiveCharacterTextSplitter` from `LangChain` as our splitting algorithm. `Chunk_size` is used as the upper limit for chuck size. In other words, a chunk will never exceed the defined `chunk_size`, but may be smaller. The `chunk_overlap` ensures that themes and ideas are not split between chunks, reducing the risk of meaningful context being lost. We measure the length of each chunk by word count; this is defined in the `length_function`. The `separators` parameter provides a mechanism for controlling document fragmentation. By establishing a prioritized list of delimiters, we guide the algorithm on how to partition the content effectively. For our naive approach, we use a simpler method, parsing the text by space first and then by character, `[" ", ""]`. Following the initial text split, the `length_function` evaluates the dimensions of each chunk. If a segment exceeds the specified `chunk_size`, it undergoes further partitioning. This iterative process utilizes the separator hierarchy to subdivide the text until all chunks align with the required size constraints. Chunks are then added to a list and tagged with metadata from the source document.
 
 ::: callout-note
 `Chunk_size = 512` and `chuck_overlap = 50` are the standard sizes used across the industry. `Chunk_size` of `512` is a good range to allow for a full complete thought, but focused enough to represent a single semantic concept. `Chunk_overlap` of `50` follows the rule of thumb of 10-15% of chunk size [@microsoft_chunk_documents_2026]. This is large enough to capture typical sentence lengths to carry over themes without bloating the vector database with too much duplicate text.
 :::
 
-Despite the prioritized delimiter hierarchy established via the `RecursiveCharacterTextSplitter`, structural fragmentation remains a risk for tabular objects. While tables are often isolated into distinct chunks due to the double-newline `"\n\n"` separator, any table exceeding the mandated `chunk_size` will undergo arbitrary partitioning. This results in individual rows being severed from their corresponding column headers, effectively destroying the semantic lineage and contextual attributes essential for accurate numerical interpretation.
+**Architecture A** uses a simple method of splitting text by spaces and characters. Because this method doesn't recognize where paragraphs or lines actually end, it often incorrectly breaks tables apart. Instead of keeping tables intact, the method randomly cuts them up based on character counts. This means a row or column might get split in the middle, separating numbers from their labels. As a result, context may be lost when trying to understand the financial data.
 
 #### Step 3: Retrieval
 
@@ -113,11 +113,29 @@ tokenized_query = tokenize(original_query)
 print(f'Original query: {original_query}\nTokenized query: {tokenized_query}')
 ```
 
-Subsequent to the normalization of both the natural-language query and the document corpus, the pipeline executes a semantic comparison to evaluate the similarity between the two datasets using `compute_bm25_scores()`. We implement the `BM25Okapi` algorithm, sourced from the `rank_bm25` library, to calculate these relevance scores. This probabilistic model assigns a weight to each text segment based on term frequency and inverse document frequency, effectively prioritizing chunks that contain rare, highly descriptive keywords over those with common linguistic fillers. To refine the retrieval accuracy, the system exposes the `k1` and `b` hyperparameters. The `k1` parameter provides a saturation function that dampens the influence of term frequency; this prevents a segment from being disproportionately weighted simply because a query term appears multiple times. Furthermore, the `b` parameter introduces length normalization, adjusting the score to ensure that expansive text blocks do not dominate the results simply by virtue of their larger word counts, thereby maintaining parity across varying chunk dimensions.
+After normalizing both the natural-language query and the document corpus, the pipeline performs a semantic comparison to evaluate the similarity between the two datasets using `compute_bm25_scores()`. We implement the `BM25Okapi` algorithm, sourced from the `rank_bm25` library, to calculate these relevance scores. This probabilistic model assigns a weight to each text segment based on term frequency and inverse document frequency, effectively prioritizing chunks that contain rare, highly descriptive keywords over those with common linguistic fillers. To refine the retrieval accuracy, the system exposes the `k1` and `b` hyperparameters. The `k1` parameter provides a saturation function that dampens the influence of term frequency; this prevents a segment from being disproportionately weighted simply because a query term appears multiple times. Furthermore, the `b` parameter introduces length normalization, adjusting the score to ensure that expansive text blocks do not dominate the results simply by virtue of their larger word counts, thereby maintaining parity across varying chunk dimensions.
 
 #### Step 4: Generation
 
+The final step in **Architecture A** is **Generation**, where the system converts the information found into a plain-language answer. The top 5 text chunks are combined and sent to the LLM (`Gemini 2.5-flash`), which acts as a financial assistant. The Large Language Model (LLM) is instructed to use only the provided information or provide a fallback if the answer is missing. Because this method treats tables like simple text and loses their headers, the LLM often receives scrambled data. This forces the model to piece together disjointed numbers, which could lead to wrong answers or hallucinations. In addition to the context, the user’s query is also injected into the final prompt sent to the LLM.
+
+Below is the prompt template used by the generative step:
+
+```text
+You are a helpful assistant analyzing financial documents.
+Answer the user's question using only the provided context. 
+If the answer is not in the context, say "I cannot answer this based on the provided documents.".
+
+Context:
+{Retrieved Context Chunks}
+
+Question:
+{User Query}
+```
+
 ### Architecture B: Table-Aware Dual-Branch RAG
+
+This architecture is our proposed solution designed to overcome the structural layout limitations inherent in a standard naive pipeline. Rather than flattening documents into a single text stream, **Architecture B** employs a dual-branch method that separates narrative text from structured tables during ingestion. By processing table structures with a **Single-Row Single-Embedding (SRSE)** representation and reconstructing the complete table context at query time, this pipeline preserves the semantic linkage among row elements, column headers, and financial units. This dual-branch approach comprises 5 distinct stages: bifurcated ingestion, chunking (narrative and SRSE), hybrid indexing, dual-channel retrieval with table reconstruction and generation.
 
 ```{mermaid}
 %%| fig-cap: "Architecture B — Table-Aware Dual-Branch RAG"
@@ -128,13 +146,34 @@ flowchart TB
     B_Ingest -->|Tables| B_SRSE["Step 2b: SRSE Row Chunking"]
     B_Text --> B_Index["Step 3: Hybrid Index"]
     B_SRSE --> B_Index
-    B_Index --> B_Retrieve["Step 4: Dual-Channel Retrieval"]
-    B_Retrieve --> B_Recon["Step 4c: Table Reconstruction"]
-    B_Recon --> B_LLM["Step 5: LLM Generation"]
+    B_Index --> B_Retrieve["Step 4a: Dual-Channel Retrieval"]
+    B_Retrieve --> B_Recon["Step 4b: Table Reconstruction"]
+    B_Recon --> B_LLM["Step 5: Generation"]
 
     classDef nodeB fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#1e3a5f
     class B_Ingest,B_Text,B_SRSE,B_Index,B_Retrieve,B_Recon,B_LLM nodeB
 ```
+
+#### Step 1: Bifurcated Ingestion
+
+The first step in **Architecture B** is **Bifurcated Ingestion**, which separates narrative prose from tabular structures at the document-parsing level. Using the `pdfplumber` library, the pipeline processes each PDF page by page to prevent layout flattening. For each page, narrative text is extracted by default, while structured tables are extracted separately as individual multidimensional grids. Cell values are cleaned of internal newlines to preserve boundary integrity, and the columns are joined with a `|` delimiter. This results in two isolated document branches, a prose branch and a raw structured table branch, ensuring that tabular elements are preserved in their native grid coordinates rather than being jumbled into a single linear text stream.
+
+#### Step 2a: Narrative Chunking
+
+In this step, the continuous narrative text is parsed into chunks, which is conceptually similar to the indexing process in Architecture A. The same target dimensions are utilized (chunk_size = 512, chunk_overlap = 50) and splitting library. However, it introduces two key deviations:
+
+1. **Structural Delimiters**: While Architecture A flattens and splits the text using basic space and character delimiters (`[" ",""]`), **Architecture B** employs a prioritized separator hierarchy `["\\n\\n", "\\n", " ",""]`. This forces the splitting algorithm to partition text at natural paragraph and sentence boundaries first, keeping reading context intact rather than severing blocks mid-sentence.
+2. **Metadata Preservation**: In **Architecture A**, page coordinates are lost during the text flattening, resulting in all chunks being tagged as `"page: unknown"`. In **Architecture B**, page indicators (e.g. `"--- Page X (text) ---"`) are parsed and stripped before splitting, allowing every resulting prose chunk to carry precise page coordinates in its metadata.
+
+#### Step 2b: SRSE Row Chunking
+
+#### Step 3: Hybrid Index
+
+#### Step 4a: Dual-Channel Retrieval
+
+#### Step 4b: Table Reconstruction
+
+#### Step 5: Generation
 
 ## Analysis and Results
 

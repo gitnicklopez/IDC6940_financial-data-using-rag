@@ -10,7 +10,7 @@ from .pipeline import run_pipeline
 from .ingestion import parse_document_linear, parse_document_table_aware
 from .indexing import index_naive_chunks, index_table_aware_rows
 from .retrieval import retrieve_naive, retrieve_table_aware
-from .evaluation import run_evaluation_suite, RowHitMetric, NAVMetric
+from .evaluation import RowHitMetric, NAVMetric
 
 __all__ = [
     "run_pipeline",
@@ -20,7 +20,6 @@ __all__ = [
     "index_table_aware_rows",
     "retrieve_naive",
     "retrieve_table_aware",
-    "run_evaluation_suite",
     "RowHitMetric",
     "NAVMetric",
 ]
