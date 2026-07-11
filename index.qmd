@@ -160,20 +160,59 @@ The first step in **Architecture B** is **Bifurcated Ingestion**, which separate
 
 #### Step 2a: Narrative Chunking
 
-In this step, the continuous narrative text is parsed into chunks, which is conceptually similar to the indexing process in Architecture A. The same target dimensions are utilized (chunk_size = 512, chunk_overlap = 50) and splitting library. However, it introduces two key deviations:
+In this step, the continuous narrative text is parsed into chunks, which is conceptually similar to the indexing process in **Architecture A**. The same target dimensions are utilized (chunk_size = 512, chunk_overlap = 50) and splitting library. However, it introduces two key deviations:
 
-1. **Structural Delimiters**: While Architecture A flattens and splits the text using basic space and character delimiters (`[" ",""]`), **Architecture B** employs a prioritized separator hierarchy `["\\n\\n", "\\n", " ",""]`. This forces the splitting algorithm to partition text at natural paragraph and sentence boundaries first, keeping reading context intact rather than severing blocks mid-sentence.
+1. **Structural Delimiters**: While **Architecture A** flattens and splits the text using basic space and character delimiters (`[" ",""]`), **Architecture B** employs a prioritized separator hierarchy `["\\n\\n", "\\n", " ",""]`. This forces the splitting algorithm to partition text at natural paragraph and sentence boundaries first, keeping reading context intact rather than severing blocks mid-sentence.
 2. **Metadata Preservation**: In **Architecture A**, page coordinates are lost during the text flattening, resulting in all chunks being tagged as `"page: unknown"`. In **Architecture B**, page indicators (e.g. `"--- Page X (text) ---"`) are parsed and stripped before splitting, allowing every resulting prose chunk to carry precise page coordinates in its metadata.
 
 #### Step 2b: SRSE Row Chunking
 
+Within our **Single-Row Single-Embedding (SRSE)** step, we process tables one row at a time rather than breaking them up by size. First, table column headers are identified. Then, each row is converted into a structured string that links every cell value to its corresponding header (e.g., "Header: Value"). It also labels every row with its specific table and page number. By attaching column headers to every row, the system ensures that numbers stay connected to their labels, which prevents the data confusion that may be present in **Architecture A**. This method is intended to preserve the full semantic meaning of each row, making it easier for the model to understand the table’s layout.
+
+For example, given a raw table row:
+
+| Year | Debt | Assets |
+|------|------|--------|
+| 2025 | $450M | $800M |
+
+The pipeline parses the cells and maps them dynamically. Below is an example of the formatting function in action:
+
+```{python}
+from src.indexing import _format_row_as_srse
+
+# Table details extracted during ingestion
+table_id = "Page_1_Table_1"
+headers = ["Year", "Debt", "Assets"]
+rows_data = ["2025", "$450M", "$800M"]
+
+# Generate Single-Row Single-Embedding (SRSE) representation
+srse_string = _format_row_as_srse(rows_data, headers, table_id)
+
+print(srse_string)
+```
+
+The `_format_row_as_srse` function converts each table row into a clear, searchable text string. It takes the row’s data, the column headers, and a unique table ID as input. It then builds a string that pairs each cell value with its matching header (e.g., "Header: Value"). If a header is missing, it assigns a temporary name. Finally, it combines the table ID and these pairs into a single line, separated by pipes (`|`). This process ensures each row stays correctly linked to its labels.
+
 #### Step 3: Hybrid Index
+
+Step 3 is the **Hybrid Index**. Instead of using one flat list, it keeps narrative text and table rows in two separate lists. This helps the system stay organized. Each list keeps track of important details, like which page the text is on or which table a row belongs to. By keeping this information separate, the system can easily search both types of content and perfectly put tables back together later. This indexing methodology will become critical for **Step 4**.
 
 #### Step 4a: Dual-Channel Retrieval
 
+In this step, the system searches both narrative text and table rows simultaneously. It uses the same **BM25 search** function (`compute_bm25_scores`) as in **Architecture A** to rank chunks by how well they match the user's question. When it finds a match:
+
+- **Narrative text** is added directly to the final context window.
+- If a table row is found, it acts as a signal to reconstruct the full table using its `table_id`.
+
+The system then skips any other rows from that same table to avoid repeating information and to keep the answer concise.
+
 #### Step 4b: Table Reconstruction
 
+The **Table Reconstruction** step ensures the LLM sees the big picture. When the system finds a single row that matches the user’s query, it automatically looks for the rest of that table. It gathers all related rows, restores their original order, and reattaches the correct column headers. Instead of just looking at a tiny fragment of data, the LLM is given the complete, formatted table. This helps the system understand the full context of the information before it generates an answer.
+
 #### Step 5: Generation
+
+This step is where the system generates the final answer. This step uses the same process as **Architecture A**. The big difference is what we feed the LLM: instead of giving it messy, scrambled text, we give it clear narrative text and organized tables. Because the data is structured and clean, the AI can easily read the numbers, match them to the right categories, and provide highly accurate, reliable answers.
 
 ## Analysis and Results
 
@@ -207,7 +246,7 @@ cols = ['Fiscal_Year', 'Total_Pages', 'Total_Text_Blocks',
 print(df[cols].round(0).to_markdown(index=False))
 ```
 
-After we ingest and index the documents for the different architectures we are comparing, we can clearly see the difference between the two in the resulting chunks. @fig-architecture-comparison compares the indexing granularity and chunk composition between Architecture A (Naive RAG) and Architecture B (Table-Aware Dual-Branch RAG).
+After we ingest and index the documents for the different architectures we are comparing, we can clearly see the difference between the two in the resulting chunks. @fig-architecture-comparison compares the indexing granularity and chunk composition between **Architecture A (Naive RAG)** and **Architecture B (Table-Aware Dual-Branch RAG)**.
 
 ```{python}
 #| label: fig-architecture-comparison-prep
@@ -277,9 +316,9 @@ fig2.update_layout(
 fig2.show()
 ```
 
-As shown above, Architecture B generates significantly more indexable chunks compared to Architecture A. This is because Architecture A uses a fixed-token linear chunking approach, compressing an entire +60 page document into ~45 coarse blocks. Meanwhile, Architecture B uses SRSE to isolate and index each row identified in each table, in addition to a fixed-token linear approach for the narrative text within each document. 
+As shown above, **Architecture B** generates significantly more indexable chunks compared to **Architecture A**. This is because **Architecture A** uses a fixed-token linear chunking approach, compressing an entire +60 page document into ~45 coarse blocks. Meanwhile, **Architecture B** uses **SRSE** to isolate and index each row identified in each table, in addition to a fixed-token linear approach for the narrative text within each document. 
 
-Under the Naive RAG approach (Architecture A), the document structure is ignored. Dense table rows are flattened into raw text and grouped arbitrarily, potentially causing numbers to lose their headers and contextual labels. In contrast, the Dual-Branch approach (Architecture B) ensures that every single row is preserved as its own semantic unit, complete with column/row header tags, preventing structural jumbling and preserving numerical lineage.
+Under the Naive RAG approach (**Architecture A**), the document structure is ignored. Dense table rows are flattened into raw text and grouped arbitrarily, potentially causing numbers to lose their headers and contextual labels. In contrast, the Dual-Branch approach (**Architecture B**) ensures that every single row is preserved as its own semantic unit, complete with column/row header tags, preventing structural jumbling and preserving numerical lineage.
 
 ### Modeling and Results
 

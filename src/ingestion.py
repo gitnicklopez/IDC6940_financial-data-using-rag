@@ -96,8 +96,21 @@ def parse_document_table_aware(pdf_path: str) -> Dict[str, Any]:
                 data["metadata"]["num_documents"] = 1
                 
             for i, page in enumerate(pdf.pages):
-                # Extract text blocks (prose)
-                page_text = page.extract_text(x_tolerance=3)
+                # Find tables on this page to exclude their boundaries from narrative prose
+                page_tables = page.find_tables()
+                
+                def not_in_table(obj):
+                    if obj.get("object_type") == "char":
+                        for t in page_tables:
+                            bbox = t.bbox  # (x0, top, x1, bottom)
+                            if bbox[0] <= obj["x0"] <= bbox[2] and bbox[1] <= obj["top"] <= bbox[3]:
+                                return False
+                    return True
+                
+                # Extract text only from non-table regions
+                prose_page = page.filter(not_in_table)
+                page_text = prose_page.extract_text(x_tolerance=3)
+                
                 if page_text:
                     data["text"].append(f"--- Page {i+1} (Text) ---\n{page_text}")
                     data["metadata"]["num_text_blocks"] += 1
