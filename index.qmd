@@ -117,7 +117,29 @@ tokenized_query = tokenize(original_query)
 print(f'Original query: {original_query}\nTokenized query: {tokenized_query}')
 ```
 
-After normalizing both the natural-language query and the document corpus, the pipeline performs a semantic comparison to evaluate the similarity between the two datasets using `compute_bm25_scores()`. We implement the `BM25Okapi` algorithm, sourced from the `rank_bm25` library, to calculate these relevance scores. This probabilistic model assigns a weight to each text segment based on term frequency and inverse document frequency, effectively prioritizing chunks that contain rare, highly descriptive keywords over those with common linguistic fillers. To refine the retrieval accuracy, the system exposes the `k1` and `b` hyperparameters. The `k1` parameter provides a saturation function that dampens the influence of term frequency; this prevents a segment from being disproportionately weighted simply because a query term appears multiple times. Furthermore, the `b` parameter introduces length normalization, adjusting the score to ensure that expansive text blocks do not dominate the results simply by virtue of their larger word counts, thereby maintaining parity across varying chunk dimensions.
+After normalizing both the natural-language query and the document corpus, the pipeline performs a semantic comparison to evaluate the similarity between the two datasets using `compute_bm25_scores()`. We implement the `BM25Okapi` algorithm, sourced from the `rank_bm25` library, to calculate these relevance scores. This probabilistic model assigns a weight to each text segment based on term frequency and inverse document frequency, effectively prioritizing chunks that contain rare, highly descriptive keywords over those with common linguistic fillers [@park2025understanding]. To refine the retrieval accuracy, the system exposes the `k1` and `b` hyperparameters. The `k1` parameter provides a saturation function that dampens the influence of term frequency; this prevents a segment from being disproportionately weighted simply because a query term appears multiple times. Furthermore, the `b` parameter introduces length normalization, adjusting the score to ensure that expansive text blocks do not dominate the results simply by virtue of their larger word counts, thereby maintaining parity across varying chunk dimensions.
+
+The general BM25 Okapi scoring formula is represented as:
+
+$$\text{score}(D, Q) = \sum_{i=1}^{n} \text{IDF}(q_i) \cdot \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\text{avgdl}}\right)}$$
+
+Where:
+
+- $f(q_i, D)$ is the term frequency of query term $q_i$ in document (chunk) $D$.
+
+- $|D|$ is the length of document $D$ in words.
+
+- $\text{avgdl}$ is the average document length across the entire corpus.
+
+- $k_1$ is a scaling hyperparameter tuning term frequency saturation.
+
+- $b$ is a hyperparameter managing document length normalization.
+
+- $\text{IDF}(q_i)$ represents the Inverse Document Frequency of query term $q_i$, computed as:
+
+$$\text{IDF}(q_i) = \ln \left( \frac{N - n(q_i) + 0.5}{n(q_i) + 0.5} + 1 \right)$$
+
+(where $N$ is the total number of documents in the corpus, and $n(q_i)$ is the number of documents containing $q_i$)[@park2025understanding].
 
 #### Step 4: Generation
 
@@ -213,6 +235,26 @@ The system then skips any other rows from that same table to avoid repeating inf
 #### Step 4b: Table Reconstruction
 
 The **Table Reconstruction** step ensures the LLM sees the big picture. When the system finds a single row that matches the user’s query, it automatically looks for the rest of that table. It gathers all related rows, restores their original order, and reattaches the correct column headers. Instead of just looking at a tiny fragment of data, the LLM is given the complete, formatted table. This helps the system understand the full context of the information before it generates an answer.
+
+Below is a demonstration of how the table reconstruction logic compiles scattered single-row semantic table chunks back into a coherent, structured Markdown table layout:
+
+```{python}
+import json
+from src.retrieval import reconstruct_table
+
+# Load the real table-aware indexed document index (SRSE format)
+with open("data/indexed/table-aware_SRSE.json", "r", encoding="utf-8") as f:
+    table_row_index = json.load(f)
+
+# Reconstruct a real table from the indexed rows (e.g. Page_12_Table_1 from FY-21-22)
+reconstructed_markdown = reconstruct_table(
+    table_id="Page_12_Table_1",
+    filename="UWF-Financial-Statement-FY-21-22.pdf",
+    table_row_index=table_row_index
+)
+
+print(reconstructed_markdown)
+```
 
 #### Step 5: Generation
 
