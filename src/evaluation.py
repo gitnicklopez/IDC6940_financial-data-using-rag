@@ -8,6 +8,7 @@ import os
 import sys
 import csv
 import time
+import json
 
 # Add the project root directory to the python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -54,6 +55,54 @@ class PageHitMetric:
                 if (table_id and loc.lower() in table_id.lower()) or (page and loc.lower() in page.lower()):
                     return 1
         return 0
+
+class PageHitPrecision:
+    """
+    Computes the fraction of retrieved chunks that match the expected document and page/table location.
+    Provides a deterministic, local alternative to LLM-based context_precision.
+    """
+    def __init__(self, top_k: int = 5):
+        self.top_k = top_k
+
+    def score(self, expected_corpus_file: str, expected_location: str, retrieved_chunks: list) -> float:
+        if not expected_corpus_file or not expected_location or not retrieved_chunks:
+            return 0.0
+            
+        import re
+        expected_locations = [loc.strip() for loc in expected_location.split(",")]
+        expected_files = [f.strip() for f in expected_corpus_file.split(",")]
+        
+        expected_pages = []
+        for loc in expected_locations:
+            match = re.search(r'\d+', loc)
+            if match:
+                expected_pages.append(match.group())
+            
+        chunks_to_eval = retrieved_chunks[:self.top_k]
+        match_count = 0
+        
+        for chunk in chunks_to_eval:
+            metadata = chunk.get("metadata", {})
+            filename = metadata.get("filename", "")
+            if filename not in expected_files:
+                continue
+                
+            page = str(metadata.get("page", ""))
+            table_id = metadata.get("table_id", "")
+            
+            is_match = False
+            if page and page in expected_pages:
+                is_match = True
+            else:
+                for loc in expected_locations:
+                    if (table_id and loc.lower() in table_id.lower()) or (page and loc.lower() in page.lower()):
+                        is_match = True
+                        break
+            
+            if is_match:
+                match_count += 1
+                
+        return match_count / len(chunks_to_eval)
 
 class NAVMetric:
     """
@@ -201,6 +250,9 @@ def main():
     os.makedirs(eval_dir, exist_ok=True)
     os.makedirs(responses_dir, exist_ok=True)
     
+    ragas_ta_path = os.path.join(eval_dir, "ragas_payload_ta.json")
+    ragas_naive_path = os.path.join(eval_dir, "ragas_payload_naive.json")
+    
     if not os.path.exists(questions_csv):
         print(f"Error: Questions file not found at {questions_csv}")
         return
@@ -226,9 +278,12 @@ def main():
     print(f"Loaded {len(questions)} questions for evaluation.")
     
     page_hit_evaluator = PageHitMetric()
+    page_hit_precision_evaluator = PageHitPrecision()
     nav_evaluator = NAVMetric()
     
     results = []
+    ragas_payload_ta = []
+    ragas_payload_naive = []
     
     for idx, q_row in enumerate(questions):
         q_id = q_row.get("Q_ID", "")
@@ -255,6 +310,7 @@ def main():
             naive_answer = f"ERROR: {e}"
             
         naive_page_hit = page_hit_evaluator.score(expected_corpus_file, expected_location, naive_chunks)
+        naive_precision = page_hit_precision_evaluator.score(expected_corpus_file, expected_location, naive_chunks)
         naive_nav = nav_evaluator.score(expected_answer, naive_answer)
         
         # --- TABLE-AWARE RAG ---
@@ -273,6 +329,7 @@ def main():
             ta_answer = f"ERROR: {e}"
             
         ta_page_hit = page_hit_evaluator.score(expected_corpus_file, expected_location, ta_chunks)
+        ta_precision = page_hit_precision_evaluator.score(expected_corpus_file, expected_location, ta_chunks)
         ta_nav = nav_evaluator.score(expected_answer, ta_answer)
         
         # Save to Markdown
@@ -282,10 +339,10 @@ def main():
         
         md_content = f"# Question ID: {q_id}\n**Tier:** {tier}\n\n## Question\n{question_text}\n\n"
         md_content += f"## Ground Truth\n- **Expected File:** `{expected_corpus_file}`\n- **Expected Location:** `{expected_location}`\n- **Expected Answer:** `{expected_answer}`\n\n"
-        md_content += f"## Table-Aware RAG (PageHit: {ta_page_hit}, NAV: {ta_nav})\n"
+        md_content += f"## Table-Aware RAG (PageHit: {ta_page_hit}, PageHitPrecision: {ta_precision:.2f}, NAV: {ta_nav})\n"
         md_content += f"### Generated Answer\n{ta_answer}\n\n### Retrieved Context\n{format_context_for_md(ta_chunks)}\n\n"
         md_content += f"---\n\n"
-        md_content += f"## Naive RAG (PageHit: {naive_page_hit}, NAV: {naive_nav})\n"
+        md_content += f"## Naive RAG (PageHit: {naive_page_hit}, PageHitPrecision: {naive_precision:.2f}, NAV: {naive_nav})\n"
         md_content += f"### Generated Answer\n{naive_answer}\n\n### Retrieved Context\n{format_context_for_md(naive_chunks)}\n"
         
         with open(md_path, 'w', encoding='utf-8') as f:
@@ -300,33 +357,57 @@ def main():
             "Expected_Answer": expected_answer,
             "Naive_Answer": naive_answer,
             "Naive_PageHit": naive_page_hit,
+            "Naive_PageHit_Precision": naive_precision,
             "Naive_NAV": naive_nav,
             "TableAware_Answer": ta_answer,
             "TableAware_PageHit": ta_page_hit,
+            "TableAware_PageHit_Precision": ta_precision,
             "TableAware_NAV": ta_nav,
             "Response_File": md_filename
+        })
+        
+        ragas_payload_ta.append({
+            "question": question_text,
+            "ground_truth": expected_answer,
+            "answer": ta_answer,
+            "contexts": [chunk.get("text", "") for chunk in ta_chunks]
+        })
+        
+        ragas_payload_naive.append({
+            "question": question_text,
+            "ground_truth": expected_answer,
+            "answer": naive_answer,
+            "contexts": [chunk.get("text", "") for chunk in naive_chunks]
         })
         
     # Save results
     print(f"Saving generated results to {output_csv}...")
     with open(output_csv, 'w', newline='', encoding='utf-8') as f:
         fieldnames = ["Q_ID", "Tier", "Question", "Expected_Corpus", "Expected_Location", "Expected_Answer", 
-                      "Naive_Answer", "Naive_PageHit", "Naive_NAV", 
-                      "TableAware_Answer", "TableAware_PageHit", "TableAware_NAV", "Response_File"]
+                      "Naive_Answer", "Naive_PageHit", "Naive_PageHit_Precision", "Naive_NAV", 
+                      "TableAware_Answer", "TableAware_PageHit", "TableAware_PageHit_Precision", "TableAware_NAV", "Response_File"]
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(results)
+        
+    print(f"Saving Ragas payloads to {ragas_ta_path} and {ragas_naive_path}...")
+    with open(ragas_ta_path, 'w', encoding='utf-8') as f:
+        json.dump(ragas_payload_ta, f, indent=2)
+    with open(ragas_naive_path, 'w', encoding='utf-8') as f:
+        json.dump(ragas_payload_naive, f, indent=2)
         
     print("\n=== Evaluation Summary ===")
     total = len(results)
     if total > 0:
         naive_ph_acc = sum(r["Naive_PageHit"] for r in results) / total
+        naive_ph_prec = sum(r["Naive_PageHit_Precision"] for r in results) / total
         naive_nav_acc = sum(r["Naive_NAV"] for r in results) / total
         ta_ph_acc = sum(r["TableAware_PageHit"] for r in results) / total
+        ta_ph_prec = sum(r["TableAware_PageHit_Precision"] for r in results) / total
         ta_nav_acc = sum(r["TableAware_NAV"] for r in results) / total
         print(f"Total Questions: {total}")
-        print(f"Naive RAG:        PageHit Accuracy = {naive_ph_acc:.1%}, NAV Accuracy = {naive_nav_acc:.1%}")
-        print(f"Table-Aware RAG:  PageHit Accuracy = {ta_ph_acc:.1%}, NAV Accuracy = {ta_nav_acc:.1%}")
+        print(f"Naive RAG:        PageHit Acc = {naive_ph_acc:.1%}, Precision = {naive_ph_prec:.1%}, NAV Acc = {naive_nav_acc:.1%}")
+        print(f"Table-Aware RAG:  PageHit Acc = {ta_ph_acc:.1%}, Precision = {ta_ph_prec:.1%}, NAV Acc = {ta_nav_acc:.1%}")
     print("Evaluation generation complete!")
 
 if __name__ == "__main__":

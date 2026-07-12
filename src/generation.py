@@ -38,7 +38,7 @@ def generate_response(prompt: str, context: str) -> str:
     """
     # Call the Gemini API
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-3.5-flash',
         contents=final_prompt
     )
     

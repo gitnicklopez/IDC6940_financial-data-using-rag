@@ -11,3 +11,8 @@ src/run_evaluation.py
 src/populate_ground_truth.py
 data/eval/responses/*
 data/eval/generated_results.csv
+src/ragas_shim.py
+src/evaluate_ragas.py
+data/eval/eval_results_ragas_ta.csv
+data/eval/ragas_payload_ta.json
+data/eval/ragas_payload_naive.json
