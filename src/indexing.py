@@ -12,6 +12,8 @@ Funtions:
     - Purpose: Formats cell sequences into metadata-rich strings to bind column definitions to values.
 '''
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import json
+import os
 
 def index_naive_chunks(text: str, chunk_size: int = 512, chunk_overlap: int = 50) -> list[dict]:
     '''
@@ -167,3 +169,31 @@ def _format_row_as_srse(row_cells: list, headers: list, table_id: str) -> str:
     
     # Return formatted metadata-rich string
     return " | ".join(parts)
+
+def export_indices_to_json(naive_index: list, text_index: list, table_row_index: list, output_dir: str = "data/indexed"):
+    '''
+    Exports the generated indices to JSON files.
+    
+    Args:
+        naive_index (list): List of naive index chunks.
+        text_index (list): List of text chunks for the table-aware pipeline.
+        table_row_index (list): List of table row chunks (SRSE) for the table-aware pipeline.
+        output_dir (str): Directory to save the JSON files.
+    '''
+    # Ensure the output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Export naive index
+    naive_path = os.path.join(output_dir, "naive.json")
+    with open(naive_path, 'w', encoding='utf-8') as f:
+        json.dump(naive_index, f, indent=4, ensure_ascii=False)
+        
+    # Export table-aware text (prose) index
+    text_path = os.path.join(output_dir, "table-aware_prose.json")
+    with open(text_path, 'w', encoding='utf-8') as f:
+        json.dump(text_index, f, indent=4, ensure_ascii=False)
+        
+    # Export table-aware SRSE index
+    table_path = os.path.join(output_dir, "table-aware_SRSE.json")
+    with open(table_path, 'w', encoding='utf-8') as f:
+        json.dump(table_row_index, f, indent=4, ensure_ascii=False)

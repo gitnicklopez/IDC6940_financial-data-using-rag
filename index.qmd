@@ -1,11 +1,14 @@
 ---
 title: "Evaluating Numerical Fidelity in Financial Documents: A Comparative Analysis of Naive and Table-Aware Dual-Branch RAG Architectures"
 subtitle: "A Capstone Project in Data Science"
-author(s): "Crystal Shin, Gredy Garrido, and Nick Lopez"
+authors: "Crystal Shin, Gredy Garrido, and Nick Lopez"
 date: '`r Sys.Date()`'
 format:
   html:
     code-fold: true
+    toc: true
+    toc-depth: 3
+    toc-title: "Navigation"
 course: Capstone Projects in Data Science
 bibliography: references.bib # file contains bibtex for references
 #always_allow_html: true # this allows to get PDF with HTML features
@@ -18,8 +21,7 @@ editor:
     wrap: 72
 ---
 
-Slides: [slides.html](slides.html){target="_blank"} ( Go to `slides.qmd`
-to edit)
+Slides: [slides.html](slides.html){target="_blank"}
 
 ## Introduction
 
@@ -77,7 +79,7 @@ flowchart TB
 
 #### Step 1: Ingestion
 
-The first step of this process is to ingest each PDF in the corpus. We do this by utilizing the `pdfplumber` library to extract the raw text. It reads the document sequentially, top to bottom, left to right, ignoring the visual bounding boxes of tables. This known behavior can lead to the Structural Evidence Gap. For example, a table row shown below will simply become a string of characters without any reference to the column headings because the heading and row-level data are reported as one continuous string of text in the document.
+The first step of this process is to ingest each PDF in the corpus. We do this by utilizing the `pdfplumber` library to extract the raw text. It reads the document sequentially, top to bottom, left to right, ignoring the visual bounding boxes of tables. This known behavior can lead to the Structural Evidence Gap [@islam2023financebenchnewbenchmarkfinancial]. For example, a table row shown below will simply become a string of characters without any reference to the column headings because the heading and row-level data are reported as one continuous string of text in the document.
 
 **Table:**
 
@@ -119,7 +121,7 @@ After normalizing both the natural-language query and the document corpus, the p
 
 #### Step 4: Generation
 
-The final step in **Architecture A** is **Generation**, where the system converts the information found into a plain-language answer. The top 5 text chunks are combined and sent to the LLM (`Gemini 2.5-flash`), which acts as a financial assistant. The Large Language Model (LLM) is instructed to use only the provided information or provide a fallback if the answer is missing. Because this method treats tables like simple text and loses their headers, the LLM often receives scrambled data. This forces the model to piece together disjointed numbers, which could lead to wrong answers or hallucinations. In addition to the context, the user’s query is also injected into the final prompt sent to the LLM.
+The final step in **Architecture A** is **Generation**, where the system converts the information found into a plain-language answer. The top 5 text chunks are combined and sent to the LLM (`Gemini 2.5-flash`), which acts as a financial assistant. The Large Language Model (LLM) is instructed to use only the provided information or provide a fallback if the answer is missing. This ensures that the LLM's focus is on grounded information and reduces the risk of hallucinations [@asai2024selfrag]. Because this method treats tables like simple text and loses their headers, the LLM often receives scrambled data. This forces the model to piece together disjointed numbers, which could lead to wrong answers or hallucinations. In addition to the context, the user’s query is also injected into the final prompt sent to the LLM.
 
 Below is the prompt template used by the generative step:
 
@@ -218,6 +220,26 @@ This step is where the system generates the final answer. This step uses the sam
 
 ### Evaluation
 
+To compare the performance of **Naive RAG** (**Architecture A**) and our **Table-Aware Dual-Branch RAG** (**Architecture B**), we developed a structured evaluation framework. We used a set of practice questions to assess how accurately each method locates information and retrieves accurate financial data.
+
+#### Evaluation Dataset and Question Tiering
+
+The evaluation dataset consists of 60 benchmark questions designed to assess different cognitive levels of data extraction and reasoning from documents in our corpus. The queries are categorized into three distinct tiers:
+
+| Tier | Question Type | Question Description | Question Example |Question Count |
+|------|---------------|----------------|------------------|---------------|
+| Tier 1 | Target Financial Values (TFV) | Simple, direct queries seeking a single, specific financial figure located within a document | What was UWF's total net position at June 30, 2023? | 20 |
+| Tier 2 | Table Extraction (TE) | Queries requiring the system to locate and extract specific data values from within dense tables, testing the pipeline's layout preservation. | What was the total amount of tuition and fees revenue for UWF in 2023? | 20 |
+| Tier 3 | Synthesis and Reasoning (SR) | Queries requiring the system to synthesize information across multiple documents, compare data across different time periods, or perform multi-step logical reasoning. | What was the total amount of tuition and fees revenue for UWF in 2023? | 20 |
+
+We selected 20 questions for each tier, totaling 60 questions. The questions were crafted to cover a range of financial topics found in the Annual Financial Reports, including revenues, expenditures, net position, and financial condition. This tiered approach allowed us to evaluate the RAG systems on progressively complex tasks, providing a comprehensive measure of their capabilities.
+
+#### Ground Truth Construction
+A curated ground-truth dataset (`data/eval/questions.csv`) serves as the benchmark for accuracy. For each of the 60 queries, the ground truth defines:
+
+- **Expected Files**: The specific PDF files containing the factual evidence.
+- **Expected Location (Pages)**: The precise page numbers where the information resides.
+- **Expected Answer**: The exact numerical values representing the correct calculation, formatted to accommodate scale variations (e.g., raw numbers, thousands, or millions).
 
 ## Analysis and Results
 

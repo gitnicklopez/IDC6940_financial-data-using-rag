@@ -12,7 +12,7 @@ Functions:
 import os
 
 from src.ingestion import parse_document_linear, parse_document_table_aware
-from src.indexing import index_naive_chunks, index_table_aware_rows
+from src.indexing import index_naive_chunks, index_table_aware_rows, export_indices_to_json
 
 def run_pipeline(pdf_dir: str) -> dict:
     """
@@ -46,7 +46,7 @@ def run_pipeline(pdf_dir: str) -> dict:
             naive_index.extend(naive_chunks)
             
             # --- Table-Aware Pipeline ---
-            parsed_data = parse_document_table_aware(pdf_path)
+            parsed_data = parse_document_table_aware(pdf_path, table_extractor="camelot")
             indexed_data = index_table_aware_rows(parsed_data)
             
             text_chunks = indexed_data.get("text", [])
@@ -59,6 +59,9 @@ def run_pipeline(pdf_dir: str) -> dict:
                 
             text_index.extend(text_chunks)
             table_row_index.extend(table_chunks)
+
+    # Export the indices to JSON files
+    export_indices_to_json(naive_index, text_index, table_row_index)
 
     return {
         "naive_index": naive_index,

@@ -110,19 +110,20 @@ def parse_srse_row(srse_text: str) -> tuple:
     # Return headers and values
     return headers, values
 
-def reconstruct_table(table_id: str, table_row_index: list) -> str:
+def reconstruct_table(table_id: str, filename: str, table_row_index: list) -> str:
     """
-    Reconstructs the full table in Markdown format using all row chunks matching table_id.
+    Reconstructs the full table in Markdown format using all row chunks matching table_id and filename.
 
     Args:
         table_id (str): The ID of the table to reconstruct.
+        filename (str): The filename of the PDF the table belongs to.
         table_row_index (list): List of table row document chunks.
     
     Returns:
         str: The full table in Markdown format.
     """
-    # Filter rows matching table_id
-    rows = [r for r in table_row_index if r.get("metadata", {}).get("table_id") == table_id]
+    # Filter rows matching table_id and filename
+    rows = [r for r in table_row_index if r.get("metadata", {}).get("table_id") == table_id and r.get("metadata", {}).get("filename") == filename]
     # If no rows found, return empty string
     if not rows:
         return ""
@@ -232,24 +233,27 @@ def retrieve_table_aware(query: str, text_index: list, table_row_index: list, to
         # Check if the source is table_aware_row
         if source == "table_aware_row":
             table_id = metadata.get("table_id")
+            filename = metadata.get("filename")
             
             # Check if the table_id is not found
-            if not table_id:
+            if not table_id or not filename:
                 retrieved_results.append(chunk)
                 continue
                 
+            unique_table_key = f"{filename}::{table_id}"
+            
             # Check if the table_id is not in reconstructed_tables
-            if table_id not in reconstructed_tables:
-                reconstructed_tables.add(table_id)
+            if unique_table_key not in reconstructed_tables:
+                reconstructed_tables.add(unique_table_key)
                 # Reconstruct full table block and create unified context chunk
-                reconstructed_text = reconstruct_table(table_id, table_row_index)
+                reconstructed_text = reconstruct_table(table_id, filename, table_row_index)
                 reconstructed_chunk = {
                     "text": reconstructed_text,
                     "metadata": {
                         "source": "reconstructed_table",
                         "table_id": table_id,
                         "page": metadata.get("page", "unknown"),
-                        "filename": metadata.get("filename", "unknown")
+                        "filename": filename
                     }
                 }
                 retrieved_results.append(reconstructed_chunk)
