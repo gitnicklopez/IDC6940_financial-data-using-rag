@@ -44,21 +44,23 @@ To solve the problems described above, this paper compares two approaches:
   - **Architecture A (Naive RAG)**: This standard method uses simple linear PDF reading and basic semantic search, which often misses the structure of financial tables.
   - **Architecture B (Table-Aware Dual-Branch RAG)**: This is our proposed solution, which helps retain structural lineage between document context and table information.
 
-Our approach includes three key steps:
+Our approach includes five key steps:
 
-  1. **Bifurcated Ingestion**: The system separates narrative text from tabular data at the beginning, ensuring tables are preserved as structured data rather than flattened into plain text.
-  2. **Hybrid Indexing**: We store each table row as an individual record, enriched with its column/row labels [@table_aware_chinese]. This ensures the AI system always knows exactly what a number represents (e.g., Fiscal Year 2025 vs. “2025”).
-  3. **Numerical Atomic Verification (NAV)**: Before the system provides an answer, a final verification step automatically checks all numbers against the original source document. If a discrepancy or unit mismatch is found, it is flagged to ensure absolute mathematical accuracy.
+1. **Bifurcated Ingestion**: The system separates narrative text from tabular data at the beginning, ensuring tables are preserved as structured data rather than flattened into plain text.
+2. **Chunking (Narrative and SRSE)**: Parsing narrative text into context-aware chunks and converting table rows into Single-Row Single-Embedding (SRSE) representations. Each table row is stored as an individual record, enriched with its column/row labels [@table_aware_chinese]. This ensures the AI system always knows exactly what a number represents (e.g., Fiscal Year 2025 vs. “2025”).
+3. **Hybrid Indexing**: Storing narrative text and table rows in separate, organized lists to maintain structural metadata.
+4. **Dual-Channel Retrieval with Table Reconstruction**: Searching both branches simultaneously and automatically reconstructing full tables when a row match is found.
+5. **Generation**: Using the structured, clear data to produce accurate, reliable answers.
 
 The pipeline is benchmarked against standard industry metrics to prove its effectiveness in handling complex financial documents.
 
 ## Methods
 
-To evaluate the impact of preserving document structure on retrieval accuracy, this study benchmarks two contrasting RAG pipelines on a corpus of annual financial statements. We contrast a standard naive RAG baseline (**Architecture A**), which flattens document layouts into linear text streams, against a Table-Aware Dual-Branch RAG pipeline (**Architecture B**), designed to isolate and process narrative and tabular elements down separate, optimized pathways. By evaluating both architectures against a validation suite of financial queries, we isolate the impact of layout preservation on numerical retrieval accuracy and context coherence.
+To evaluate the impact of preserving document structure on retrieval accuracy, this study compares two contrasting RAG pipelines on a corpus of annual financial statements. We compare a standard naive RAG baseline (**Architecture A**), which flattens document layouts into linear text streams, against a Table-Aware Dual-Branch RAG pipeline (**Architecture B**), designed to isolate and process narrative and tabular elements down separate, optimized pathways. By evaluating both architectures against a validation suite of financial queries, we evaluate the impact of layout preservation on numerical retrieval accuracy and context coherence.
 
 ### Architecture A: Naive RAG
 
-This architecture serves as our baseline RAG methodology. It represents the industry standard for text-heavy question-and-answer (QA) systems, which treat all document elements (paragraphs, footnotes, tables, etc.) as a continuous sequence of characters. This method is one of the original techniques of RAG and gained popularity shortly after the widespread adoption of ChatGPT [@gao2023retrievalaugmented]. This approach can be broken down into 4 stages: ingestion, indexing, retrieval, and generation.
+This architecture serves as our baseline RAG methodology. It represents the standard for text-heavy question-and-answer (QA) systems, which treat all document elements (paragraphs, footnotes, tables, etc.) as a continuous sequence of characters [@lewis2020retrieval]. This method is one of the original techniques of RAG and gained popularity shortly after the widespread adoption of ChatGPT [@gao2023retrievalaugmented]. This approach can be broken down into 4 stages: ingestion, indexing, retrieval, and generation.
 
 ```{mermaid}
 %%| fig-cap: "Architecture A — Naive RAG"
@@ -201,7 +203,7 @@ Step 3 is the **Hybrid Index**. Instead of using one flat list, it keeps narrati
 
 In this step, the system searches both narrative text and table rows simultaneously. It uses the same **BM25 search** function (`compute_bm25_scores`) as in **Architecture A** to rank chunks by how well they match the user's question. When it finds a match:
 
-- **Narrative text** is added directly to the final context window.
+- Narrative text is added directly to the final context window.
 - If a table row is found, it acts as a signal to reconstruct the full table using its `table_id`.
 
 The system then skips any other rows from that same table to avoid repeating information and to keep the answer concise.
@@ -212,7 +214,10 @@ The **Table Reconstruction** step ensures the LLM sees the big picture. When the
 
 #### Step 5: Generation
 
-This step is where the system generates the final answer. This step uses the same process as **Architecture A**. The big difference is what we feed the LLM: instead of giving it messy, scrambled text, we give it clear narrative text and organized tables. Because the data is structured and clean, the AI can easily read the numbers, match them to the right categories, and provide highly accurate, reliable answers.
+This step is where the system generates the final answer. This step uses the same process as **Architecture A**. The big difference is what we feed the LLM. Instead of giving it messy, scrambled text, we give it clear narrative text and organized tables. Because the data is structured and clean, the AI can easily read the numbers, match them to the right categories, and provide highly accurate, reliable answers.
+
+### Evaluation
+
 
 ## Analysis and Results
 

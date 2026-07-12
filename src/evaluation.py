@@ -16,7 +16,7 @@ from src.pipeline import run_pipeline
 from src.retrieval import retrieve_table_aware, retrieve_naive
 from src.generation import generate_response
 
-class RowHitMetric:
+class PageHitMetric:
     """
     Computes Recall for tables and pages.
     Checks if the expected document and location (page/table) were present in the retrieved chunks.
@@ -225,7 +225,7 @@ def main():
             
     print(f"Loaded {len(questions)} questions for evaluation.")
     
-    row_hit_evaluator = RowHitMetric()
+    page_hit_evaluator = PageHitMetric()
     nav_evaluator = NAVMetric()
     
     results = []
@@ -254,7 +254,7 @@ def main():
             print(f"Error generating naive response for {q_id}: {e}")
             naive_answer = f"ERROR: {e}"
             
-        naive_row_hit = row_hit_evaluator.score(expected_corpus_file, expected_location, naive_chunks)
+        naive_page_hit = page_hit_evaluator.score(expected_corpus_file, expected_location, naive_chunks)
         naive_nav = nav_evaluator.score(expected_answer, naive_answer)
         
         # --- TABLE-AWARE RAG ---
@@ -272,7 +272,7 @@ def main():
             print(f"Error generating table-aware response for {q_id}: {e}")
             ta_answer = f"ERROR: {e}"
             
-        ta_row_hit = row_hit_evaluator.score(expected_corpus_file, expected_location, ta_chunks)
+        ta_page_hit = page_hit_evaluator.score(expected_corpus_file, expected_location, ta_chunks)
         ta_nav = nav_evaluator.score(expected_answer, ta_answer)
         
         # Save to Markdown
@@ -282,10 +282,10 @@ def main():
         
         md_content = f"# Question ID: {q_id}\n**Tier:** {tier}\n\n## Question\n{question_text}\n\n"
         md_content += f"## Ground Truth\n- **Expected File:** `{expected_corpus_file}`\n- **Expected Location:** `{expected_location}`\n- **Expected Answer:** `{expected_answer}`\n\n"
-        md_content += f"## Table-Aware RAG (RowHit: {ta_row_hit}, NAV: {ta_nav})\n"
+        md_content += f"## Table-Aware RAG (PageHit: {ta_page_hit}, NAV: {ta_nav})\n"
         md_content += f"### Generated Answer\n{ta_answer}\n\n### Retrieved Context\n{format_context_for_md(ta_chunks)}\n\n"
         md_content += f"---\n\n"
-        md_content += f"## Naive RAG (RowHit: {naive_row_hit}, NAV: {naive_nav})\n"
+        md_content += f"## Naive RAG (PageHit: {naive_page_hit}, NAV: {naive_nav})\n"
         md_content += f"### Generated Answer\n{naive_answer}\n\n### Retrieved Context\n{format_context_for_md(naive_chunks)}\n"
         
         with open(md_path, 'w', encoding='utf-8') as f:
@@ -299,10 +299,10 @@ def main():
             "Expected_Location": expected_location,
             "Expected_Answer": expected_answer,
             "Naive_Answer": naive_answer,
-            "Naive_RowHit": naive_row_hit,
+            "Naive_PageHit": naive_page_hit,
             "Naive_NAV": naive_nav,
             "TableAware_Answer": ta_answer,
-            "TableAware_RowHit": ta_row_hit,
+            "TableAware_PageHit": ta_page_hit,
             "TableAware_NAV": ta_nav,
             "Response_File": md_filename
         })
@@ -311,8 +311,8 @@ def main():
     print(f"Saving generated results to {output_csv}...")
     with open(output_csv, 'w', newline='', encoding='utf-8') as f:
         fieldnames = ["Q_ID", "Tier", "Question", "Expected_Corpus", "Expected_Location", "Expected_Answer", 
-                      "Naive_Answer", "Naive_RowHit", "Naive_NAV", 
-                      "TableAware_Answer", "TableAware_RowHit", "TableAware_NAV", "Response_File"]
+                      "Naive_Answer", "Naive_PageHit", "Naive_NAV", 
+                      "TableAware_Answer", "TableAware_PageHit", "TableAware_NAV", "Response_File"]
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(results)
@@ -320,13 +320,13 @@ def main():
     print("\n=== Evaluation Summary ===")
     total = len(results)
     if total > 0:
-        naive_rh_acc = sum(r["Naive_RowHit"] for r in results) / total
+        naive_ph_acc = sum(r["Naive_PageHit"] for r in results) / total
         naive_nav_acc = sum(r["Naive_NAV"] for r in results) / total
-        ta_rh_acc = sum(r["TableAware_RowHit"] for r in results) / total
+        ta_ph_acc = sum(r["TableAware_PageHit"] for r in results) / total
         ta_nav_acc = sum(r["TableAware_NAV"] for r in results) / total
         print(f"Total Questions: {total}")
-        print(f"Naive RAG:        RowHit Accuracy = {naive_rh_acc:.1%}, NAV Accuracy = {naive_nav_acc:.1%}")
-        print(f"Table-Aware RAG:  RowHit Accuracy = {ta_rh_acc:.1%}, NAV Accuracy = {ta_nav_acc:.1%}")
+        print(f"Naive RAG:        PageHit Accuracy = {naive_ph_acc:.1%}, NAV Accuracy = {naive_nav_acc:.1%}")
+        print(f"Table-Aware RAG:  PageHit Accuracy = {ta_ph_acc:.1%}, NAV Accuracy = {ta_nav_acc:.1%}")
     print("Evaluation generation complete!")
 
 if __name__ == "__main__":
