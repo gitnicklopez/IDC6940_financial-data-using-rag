@@ -283,6 +283,34 @@ A curated ground-truth dataset (`data/eval/questions.csv`) serves as the benchma
 - **Expected Location (Pages)**: The precise page numbers where the information resides.
 - **Expected Answer**: The exact numerical values representing the correct calculation, formatted to accommodate scale variations (e.g., raw numbers, thousands, or millions).
 
+#### Evaluation Metrics
+
+We use four metrics to measure how well each architecture finds the right information and how accurately it answers questions:
+
+1. `PageHit`: This checks if the correct docuemnt and page is among the LLM's top 5 results. It is a simple "yes" or "no" score; either the LLM found the right source (1) or it didn't (0).
+   
+   $$\text{PageHit}(C_R, E) = \max_{c \in C_R} \mathbb{I}(\text{match}(c, E))$$
+   
+   Where $C_R$ is the set of retrieved chunks, $E$ represents the expected ground-truth location, and $\mathbb{I}(\text{match}(c, E))$ is an indicator function outputting $1$ if chunk $c$ matches the expected location $E$ (by file name and page/table ID) and $0$ otherwise.
+
+2. `PageHitPrecision`: This measures how well the retrieval step retrieves the results. It gives a higher score if the correct information appears at the very top of the list rather than further down. This helps us see how efficient the system is at surfacing the best evidence.
+   
+   $$\text{PageHitPrecision} = \frac{1}{N_{hits}} \sum_{i=1}^{k} \left( \frac{\sum_{j=1}^{i} \mathbb{I}(c_j \in E)}{i} \times \mathbb{I}(c_i \in E) \right)$$
+   
+   Where $c_i$ is the chunk at rank $i$, $\mathbb{I}(c \in E)$ indicates whether a chunk is a correct match, and $N_{hits} = \sum_{i=1}^{k} \mathbb{I}(c_i \in E)$ is the total number of hits in the top-$k$ (default $k=5$). If $N_{hits} = 0$, the precision is defined as $0$.
+
+3. `NAVMetric` (Numerical Atomic Verification): This measures the accuracy of the actual answer. Since financial numbers can be written in different ways (like "$12.5M" vs. "12,500,000"), this tool standardizes the numbers and compares them to the primary ground-truth value. Instead of a binary score, it provides diminishing rewards for numbers rounded to the thousands or millions:
+   
+   $$\text{NAV}(A_{gen}, y) = \max_{\hat{y} \in \text{Extract}(A_{gen})} \text{Reward}\left( \frac{|\hat{y} - y|}{|y|} \right)$$
+   
+   Where $y$ is the primary ground-truth numerical value, $A_{gen}$ is the generated text answer, and $\text{Extract}(A_{gen})$ returns the set of scaled numerical candidates found in the text. The $\text{Reward}$ function outputs $1.0$ for near-exact matches ($\le 0.1\%$ error), $0.75$ for thousands rounding ($\le 0.5\%$ error), $0.5$ for millions rounding ($\le 5\%$ error), and $0.0$ otherwise.
+
+4. `calculate_cea` (Conditional Extraction Accuracy): This measures the fraction of correctly answered questions given that the correct context was successfully retrieved (PageHit=1). It helps us understand the effectiveness of the LLM in extracting the correct answer from the retrieved context:
+   
+   $$\text{CEA} = \frac{\sum_{q \in Q} \text{NAV}_q \times \text{PageHit}_q}{\sum_{q \in Q} \text{PageHit}_q}$$
+   
+   Where $Q$ is the set of all evaluation questions, and $\text{NAV}_q$ and $\text{PageHit}_q$ represent the respective metric scores for question $q$.
+
 ## Analysis and Results
 
 ### Data Exploration and Visualization

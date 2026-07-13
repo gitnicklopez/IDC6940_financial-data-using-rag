@@ -8,9 +8,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-def generate_response(prompt: str, context: str) -> str:
+async def generate_response(prompt: str, context: str) -> str:
     """
-    Generates a response using the Gemini LLM based on the provided context.
+    Generates a response using the Gemini LLM based on the provided context asynchronously.
 
     Args:
         prompt (str): The question to ask the LLM.
@@ -36,8 +36,8 @@ def generate_response(prompt: str, context: str) -> str:
         Question:
         {prompt}
     """
-    # Call the Gemini API
-    response = client.models.generate_content(
+    # Call the Gemini API asynchronously
+    response = await client.aio.models.generate_content(
         model='gemini-3.5-flash',
         contents=final_prompt
     )

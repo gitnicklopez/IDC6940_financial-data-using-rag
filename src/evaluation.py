@@ -9,6 +9,7 @@ import sys
 import csv
 import time
 import json
+import asyncio
 
 # Add the project root directory to the python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -79,12 +80,12 @@ class PageHitPrecision:
                 expected_pages.append(match.group())
             
         chunks_to_eval = retrieved_chunks[:self.top_k]
-        match_count = 0
-        
-        for chunk in chunks_to_eval:
+        hits = []
+        for idx, chunk in enumerate(chunks_to_eval):
             metadata = chunk.get("metadata", {})
             filename = metadata.get("filename", "")
             if filename not in expected_files:
+                hits.append(0)
                 continue
                 
             page = str(metadata.get("page", ""))
@@ -99,62 +100,72 @@ class PageHitPrecision:
                         is_match = True
                         break
             
-            if is_match:
-                match_count += 1
+            hits.append(1 if is_match else 0)
+            
+        if sum(hits) == 0:
+            return 0.0
+            
+        # Calculate Average Precision (AP) to reward higher-ranked hits
+        precisions = []
+        hits_so_far = 0
+        for i, is_hit in enumerate(hits):
+            if is_hit:
+                hits_so_far += 1
+                precisions.append(hits_so_far / (i + 1))
                 
-        return match_count / len(chunks_to_eval)
+        return sum(precisions) / len(precisions)
 
 class NAVMetric:
     """
     Numerical Atomic Verification (NAV) Metric.
     Ensures that the exact numerical ground truth is present in the generated answer.
-    Supports multiple acceptable formats separated by '|'.
+    Focuses on the primary ground truth value (first synonym) and gives 
+    diminishing rewards for numbers rounded to the thousands or millions.
     """
-    def score(self, expected_value: str, generated_answer: str) -> int:
+    def score(self, expected_value: str, generated_answer: str) -> float:
         if not expected_value or not generated_answer:
-            return 0
+            return 0.0
             
-        # 1. Try numerical value verification
         try:
-            expected_candidates = []
-            synonyms = [s.strip() for s in str(expected_value).split("|")]
-            for syn in synonyms:
-                expected_candidates.extend(self._extract_numerical_candidates(syn))
-                
+            # 1. Focus on the first expected answer (the gold standard)
+            gold_synonym = str(expected_value).split("|")[0].strip()
+            expected_candidates = self._extract_numerical_candidates(gold_synonym)
             generated_candidates = self._extract_numerical_candidates(generated_answer)
             
-            if expected_candidates and generated_candidates:
-                for exp_val in expected_candidates:
-                    exp_is_year = 1990.0 <= exp_val <= 2040.0
-                    for gen_val in generated_candidates:
-                        # If expected value is not a year, don't match it with a year in the generated answer
-                        if not exp_is_year and (1990.0 <= gen_val <= 2040.0):
-                            continue
-                        
-                        if exp_val == 0:
-                            diff = abs(gen_val)
-                        else:
-                            diff = abs(exp_val - gen_val) / exp_val
-                            
-                        if diff <= 0.01:  # 1% tolerance
-                            return 1
-        except Exception:
-            # Fallback if parsing fails
-            pass
-
-        # 2. Fallback: Exact string matching
-        synonyms = [s.strip() for s in str(expected_value).split("|")]
-        norm_answer = str(generated_answer).replace(",", "").replace(" ", "").lower()
-        for syn in synonyms:
-            if not syn:
-                continue
-            norm_syn = syn.replace(",", "").replace(" ", "").lower()
-            if norm_syn in norm_answer:
-                return 1
-            if syn.lower() in str(generated_answer).lower():
-                return 1
+            if not expected_candidates or not generated_candidates:
+                return 0.0
                 
-        return 0
+            best_score = 0.0
+            
+            for exp_val in expected_candidates:
+                exp_is_year = 1990.0 <= exp_val <= 2040.0
+                for gen_val in generated_candidates:
+                    # If expected value is not a year, don't match it with a year in the generated answer
+                    if not exp_is_year and (1990.0 <= gen_val <= 2040.0):
+                        continue
+                    
+                    if exp_val == 0:
+                        rel_error = abs(gen_val)
+                    else:
+                        rel_error = abs(exp_val - gen_val) / abs(exp_val)
+                        
+                    # Diminishing rewards based on typical rounding thresholds
+                    if rel_error <= 0.001:
+                        current_score = 1.0
+                    elif rel_error <= 0.005:
+                        current_score = 0.75
+                    elif rel_error <= 0.05:
+                        current_score = 0.5
+                    else:
+                        current_score = 0.0
+                        
+                    if current_score > best_score:
+                        best_score = current_score
+                        
+            return best_score
+            
+        except Exception:
+            return 0.0
 
     def _extract_numerical_candidates(self, text: str) -> list:
         import re
@@ -211,6 +222,21 @@ class NAVMetric:
                     
         return list(candidates)
 
+def calculate_cea(results: list, page_hit_key: str, nav_key: str) -> float:
+    """
+    Calculates Conditional Extraction Accuracy (CEA).
+    CEA is the fraction of correctly answered questions (NAV=1)
+    given that the correct context was successfully retrieved (PageHit=1).
+    """
+    # Filter for questions where PageHit is 1
+    ph_1 = [r for r in results if r.get(page_hit_key) == 1]
+    
+    # If no questions have PageHit=1, return 0.0 to avoid division by zero
+    if not ph_1:
+        return 0.0
+    
+    return sum(r.get(nav_key, 0) for r in ph_1) / len(ph_1) if ph_1 else 0.0
+
 def format_context_for_md(retrieved_chunks):
     md_context_parts = []
     for c_idx, chunk in enumerate(retrieved_chunks):
@@ -235,7 +261,105 @@ def format_context_for_md(retrieved_chunks):
         md_context_parts.append(chunk_md)
     return "\n\n".join(md_context_parts)
 
-def main():
+async def process_question(idx, q_row, total_q, naive_index, text_index, table_row_index, responses_dir, semaphore, page_hit_evaluator, page_hit_precision_evaluator, nav_evaluator):
+    async with semaphore:
+        q_id = q_row.get("Q_ID", "")
+        tier = q_row.get("Tier", "")
+        question_text = q_row.get("Question", "")
+        expected_corpus_file = q_row.get("corpus_file", "")
+        expected_location = q_row.get("Expected_Table_ID", "")
+        expected_answer = q_row.get("Expected_Answer", "")
+        
+        print(f"Processing ({idx+1}/{total_q}): [{q_id}] {question_text}")
+        
+        # --- NAIVE RAG ---
+        naive_chunks = retrieve_naive(
+            query=question_text,
+            indexed_chunks=naive_index,
+            top_k=5
+        )
+        naive_context = "\n\n".join([chunk.get("text", "") for chunk in naive_chunks])
+        
+        try:
+            naive_answer = await generate_response(prompt=question_text, context=naive_context)
+        except Exception as e:
+            print(f"Error generating naive response for {q_id}: {e}")
+            naive_answer = f"ERROR: {e}"
+            
+        naive_page_hit = page_hit_evaluator.score(expected_corpus_file, expected_location, naive_chunks)
+        naive_precision = page_hit_precision_evaluator.score(expected_corpus_file, expected_location, naive_chunks)
+        naive_nav = nav_evaluator.score(expected_answer, naive_answer)
+        
+        # --- TABLE-AWARE RAG ---
+        ta_chunks = retrieve_table_aware(
+            query=question_text,
+            text_index=text_index,
+            table_row_index=table_row_index,
+            top_k=5
+        )
+        ta_context = "\n\n".join([chunk.get("text", "") for chunk in ta_chunks])
+        
+        try:
+            ta_answer = await generate_response(prompt=question_text, context=ta_context)
+        except Exception as e:
+            print(f"Error generating table-aware response for {q_id}: {e}")
+            ta_answer = f"ERROR: {e}"
+            
+        ta_page_hit = page_hit_evaluator.score(expected_corpus_file, expected_location, ta_chunks)
+        ta_precision = page_hit_precision_evaluator.score(expected_corpus_file, expected_location, ta_chunks)
+        ta_nav = nav_evaluator.score(expected_answer, ta_answer)
+        
+        # Save to Markdown
+        safe_q_id = q_id if q_id else f"Q_Unknown_{idx+1}"
+        md_filename = f"{safe_q_id}.md"
+        md_path = os.path.join(responses_dir, md_filename)
+        
+        md_content = f"# Question ID: {q_id}\n**Tier:** {tier}\n\n## Question\n{question_text}\n\n"
+        md_content += f"## Ground Truth\n- **Expected File:** `{expected_corpus_file}`\n- **Expected Location:** `{expected_location}`\n- **Expected Answer:** `{expected_answer}`\n\n"
+        md_content += f"## Table-Aware RAG (PageHit: {ta_page_hit}, PageHitPrecision: {ta_precision:.2f}, NAV: {ta_nav})\n"
+        md_content += f"### Generated Answer\n{ta_answer}\n\n### Retrieved Context\n{format_context_for_md(ta_chunks)}\n\n"
+        md_content += f"---\n\n"
+        md_content += f"## Naive RAG (PageHit: {naive_page_hit}, PageHitPrecision: {naive_precision:.2f}, NAV: {naive_nav})\n"
+        md_content += f"### Generated Answer\n{naive_answer}\n\n### Retrieved Context\n{format_context_for_md(naive_chunks)}\n"
+        
+        with open(md_path, 'w', encoding='utf-8') as f:
+            f.write(md_content)
+            
+        result = {
+            "Q_ID": q_id,
+            "Tier": tier,
+            "Question": question_text,
+            "Expected_Corpus": expected_corpus_file,
+            "Expected_Location": expected_location,
+            "Expected_Answer": expected_answer,
+            "Naive_Answer": naive_answer,
+            "Naive_PageHit": naive_page_hit,
+            "Naive_PageHit_Precision": naive_precision,
+            "Naive_NAV": naive_nav,
+            "TableAware_Answer": ta_answer,
+            "TableAware_PageHit": ta_page_hit,
+            "TableAware_PageHit_Precision": ta_precision,
+            "TableAware_NAV": ta_nav,
+            "Response_File": md_filename
+        }
+        
+        payload_ta = {
+            "question": question_text,
+            "ground_truth": expected_answer,
+            "answer": ta_answer,
+            "contexts": [chunk.get("text", "") for chunk in ta_chunks]
+        }
+        
+        payload_naive = {
+            "question": question_text,
+            "ground_truth": expected_answer,
+            "answer": naive_answer,
+            "contexts": [chunk.get("text", "") for chunk in naive_chunks]
+        }
+        
+        return result, payload_ta, payload_naive
+
+async def main():
     print("Starting RAG evaluation generation...")
     
     # Set up directory paths
@@ -285,100 +409,22 @@ def main():
     ragas_payload_ta = []
     ragas_payload_naive = []
     
+    semaphore = asyncio.Semaphore(5)
+    tasks = []
     for idx, q_row in enumerate(questions):
-        q_id = q_row.get("Q_ID", "")
-        tier = q_row.get("Tier", "")
-        question_text = q_row.get("Question", "")
-        expected_corpus_file = q_row.get("corpus_file", "")
-        expected_location = q_row.get("Expected_Table_ID", "")
-        expected_answer = q_row.get("Expected_Answer", "")
+        tasks.append(process_question(
+            idx, q_row, len(questions),
+            naive_index, text_index, table_row_index,
+            responses_dir, semaphore,
+            page_hit_evaluator, page_hit_precision_evaluator, nav_evaluator
+        ))
         
-        print(f"Processing ({idx+1}/{len(questions)}): [{q_id}] {question_text}")
-        
-        # --- NAIVE RAG ---
-        naive_chunks = retrieve_naive(
-            query=question_text,
-            indexed_chunks=naive_index,
-            top_k=5
-        )
-        naive_context = "\n\n".join([chunk.get("text", "") for chunk in naive_chunks])
-        
-        try:
-            naive_answer = generate_response(prompt=question_text, context=naive_context)
-        except Exception as e:
-            print(f"Error generating naive response for {q_id}: {e}")
-            naive_answer = f"ERROR: {e}"
-            
-        naive_page_hit = page_hit_evaluator.score(expected_corpus_file, expected_location, naive_chunks)
-        naive_precision = page_hit_precision_evaluator.score(expected_corpus_file, expected_location, naive_chunks)
-        naive_nav = nav_evaluator.score(expected_answer, naive_answer)
-        
-        # --- TABLE-AWARE RAG ---
-        ta_chunks = retrieve_table_aware(
-            query=question_text,
-            text_index=text_index,
-            table_row_index=table_row_index,
-            top_k=5
-        )
-        ta_context = "\n\n".join([chunk.get("text", "") for chunk in ta_chunks])
-        
-        try:
-            ta_answer = generate_response(prompt=question_text, context=ta_context)
-        except Exception as e:
-            print(f"Error generating table-aware response for {q_id}: {e}")
-            ta_answer = f"ERROR: {e}"
-            
-        ta_page_hit = page_hit_evaluator.score(expected_corpus_file, expected_location, ta_chunks)
-        ta_precision = page_hit_precision_evaluator.score(expected_corpus_file, expected_location, ta_chunks)
-        ta_nav = nav_evaluator.score(expected_answer, ta_answer)
-        
-        # Save to Markdown
-        safe_q_id = q_id if q_id else f"Q_Unknown_{idx+1}"
-        md_filename = f"{safe_q_id}.md"
-        md_path = os.path.join(responses_dir, md_filename)
-        
-        md_content = f"# Question ID: {q_id}\n**Tier:** {tier}\n\n## Question\n{question_text}\n\n"
-        md_content += f"## Ground Truth\n- **Expected File:** `{expected_corpus_file}`\n- **Expected Location:** `{expected_location}`\n- **Expected Answer:** `{expected_answer}`\n\n"
-        md_content += f"## Table-Aware RAG (PageHit: {ta_page_hit}, PageHitPrecision: {ta_precision:.2f}, NAV: {ta_nav})\n"
-        md_content += f"### Generated Answer\n{ta_answer}\n\n### Retrieved Context\n{format_context_for_md(ta_chunks)}\n\n"
-        md_content += f"---\n\n"
-        md_content += f"## Naive RAG (PageHit: {naive_page_hit}, PageHitPrecision: {naive_precision:.2f}, NAV: {naive_nav})\n"
-        md_content += f"### Generated Answer\n{naive_answer}\n\n### Retrieved Context\n{format_context_for_md(naive_chunks)}\n"
-        
-        with open(md_path, 'w', encoding='utf-8') as f:
-            f.write(md_content)
-            
-        results.append({
-            "Q_ID": q_id,
-            "Tier": tier,
-            "Question": question_text,
-            "Expected_Corpus": expected_corpus_file,
-            "Expected_Location": expected_location,
-            "Expected_Answer": expected_answer,
-            "Naive_Answer": naive_answer,
-            "Naive_PageHit": naive_page_hit,
-            "Naive_PageHit_Precision": naive_precision,
-            "Naive_NAV": naive_nav,
-            "TableAware_Answer": ta_answer,
-            "TableAware_PageHit": ta_page_hit,
-            "TableAware_PageHit_Precision": ta_precision,
-            "TableAware_NAV": ta_nav,
-            "Response_File": md_filename
-        })
-        
-        ragas_payload_ta.append({
-            "question": question_text,
-            "ground_truth": expected_answer,
-            "answer": ta_answer,
-            "contexts": [chunk.get("text", "") for chunk in ta_chunks]
-        })
-        
-        ragas_payload_naive.append({
-            "question": question_text,
-            "ground_truth": expected_answer,
-            "answer": naive_answer,
-            "contexts": [chunk.get("text", "") for chunk in naive_chunks]
-        })
+    all_outputs = await asyncio.gather(*tasks)
+    
+    for res, p_ta, p_naive in all_outputs:
+        results.append(res)
+        ragas_payload_ta.append(p_ta)
+        ragas_payload_naive.append(p_naive)
         
     # Save results
     print(f"Saving generated results to {output_csv}...")
@@ -405,10 +451,15 @@ def main():
         ta_ph_acc = sum(r["TableAware_PageHit"] for r in results) / total
         ta_ph_prec = sum(r["TableAware_PageHit_Precision"] for r in results) / total
         ta_nav_acc = sum(r["TableAware_NAV"] for r in results) / total
+        
+        # Calculate Conditional Extraction Accuracy (CEA)
+        naive_cea = calculate_cea(results, "Naive_PageHit", "Naive_NAV")
+        ta_cea = calculate_cea(results, "TableAware_PageHit", "TableAware_NAV")
+
         print(f"Total Questions: {total}")
-        print(f"Naive RAG:        PageHit Acc = {naive_ph_acc:.1%}, Precision = {naive_ph_prec:.1%}, NAV Acc = {naive_nav_acc:.1%}")
-        print(f"Table-Aware RAG:  PageHit Acc = {ta_ph_acc:.1%}, Precision = {ta_ph_prec:.1%}, NAV Acc = {ta_nav_acc:.1%}")
+        print(f"Naive RAG:        PageHit Acc = {naive_ph_acc:.1%}, Precision = {naive_ph_prec:.1%}, NAV Acc = {naive_nav_acc:.1%}, CEA = {naive_cea:.1%}")
+        print(f"Table-Aware RAG:  PageHit Acc = {ta_ph_acc:.1%}, Precision = {ta_ph_prec:.1%}, NAV Acc = {ta_nav_acc:.1%}, CEA = {ta_cea:.1%}")
     print("Evaluation generation complete!")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
