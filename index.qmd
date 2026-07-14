@@ -289,26 +289,38 @@ We use four metrics to measure how well each architecture finds the right inform
 
 1. `PageHit`: This checks if the correct docuemnt and page is among the LLM's top 5 results. It is a simple "yes" or "no" score; either the LLM found the right source (1) or it didn't (0).
    
-   $$\text{PageHit}(C_R, E) = \max_{c \in C_R} \mathbb{I}(\text{match}(c, E))$$
-   
+$$
+\text{PageHit}(C_R, E) = \max_{c \in C_R} \mathbb{I}(\text{match}(c, E))
+$$
+
    Where $C_R$ is the set of retrieved chunks, $E$ represents the expected ground-truth location, and $\mathbb{I}(\text{match}(c, E))$ is an indicator function outputting $1$ if chunk $c$ matches the expected location $E$ (by file name and page/table ID) and $0$ otherwise.
+
 
 2. `PageHitPrecision`: This measures how well the retrieval step retrieves the results. It gives a higher score if the correct information appears at the very top of the list rather than further down. This helps us see how efficient the system is at surfacing the best evidence.
    
-   $$\text{PageHitPrecision} = \frac{1}{N_{hits}} \sum_{i=1}^{k} \left( \frac{\sum_{j=1}^{i} \mathbb{I}(c_j \in E)}{i} \times \mathbb{I}(c_i \in E) \right)$$
-   
+$$
+\text{PageHitPrecision} = \frac{1}{N_{hits}} \sum_{i=1}^{k} \left( \frac{\sum_{j=1}^{i} \mathbb{I}(c_j \in E)}{i} \times \mathbb{I}(c_i \in E) \right)
+$$
+
    Where $c_i$ is the chunk at rank $i$, $\mathbb{I}(c \in E)$ indicates whether a chunk is a correct match, and $N_{hits} = \sum_{i=1}^{k} \mathbb{I}(c_i \in E)$ is the total number of hits in the top-$k$ (default $k=5$). If $N_{hits} = 0$, the precision is defined as $0$.
+
 
 3. `NAVMetric` (Numerical Atomic Verification): This measures the accuracy of the actual answer. Since financial numbers can be written in different ways (like "$12.5M" vs. "12,500,000"), this tool standardizes the numbers and compares them to the primary ground-truth value. Instead of a binary score, it provides diminishing rewards for numbers rounded to the thousands or millions:
    
-   $$\text{NAV}(A_{gen}, y) = \max_{\hat{y} \in \text{Extract}(A_{gen})} \text{Reward}\left( \frac{|\hat{y} - y|}{|y|} \right)$$
-   
+$$
+\text{NAV}(A_{gen}, y) = \max_{\hat{y} \in \text{Extract}(A_{gen})} \text{Reward}\left( \frac{|\hat{y} - y|}{|y|} \right)
+$$
+
+
    Where $y$ is the primary ground-truth numerical value, $A_{gen}$ is the generated text answer, and $\text{Extract}(A_{gen})$ returns the set of scaled numerical candidates found in the text. The $\text{Reward}$ function outputs $1.0$ for near-exact matches ($\le 0.1\%$ error), $0.75$ for thousands rounding ($\le 0.5\%$ error), $0.5$ for millions rounding ($\le 5\%$ error), and $0.0$ otherwise.
+
 
 4. `calculate_cea` (Conditional Extraction Accuracy): This measures the fraction of correctly answered questions given that the correct context was successfully retrieved (PageHit=1). It helps us understand the effectiveness of the LLM in extracting the correct answer from the retrieved context:
    
-   $$\text{CEA} = \frac{\sum_{q \in Q} \text{NAV}_q \times \text{PageHit}_q}{\sum_{q \in Q} \text{PageHit}_q}$$
-   
+$$
+\text{CEA} = \frac{\sum_{q \in Q} \text{NAV}_q \times \text{PageHit}_q}{\sum_{q \in Q} \text{PageHit}_q}
+$$
+
    Where $Q$ is the set of all evaluation questions, and $\text{NAV}_q$ and $\text{PageHit}_q$ represent the respective metric scores for question $q$.
 
 ## Analysis and Results
@@ -417,21 +429,161 @@ As shown above, **Architecture B** generates significantly more indexable chunks
 
 Under the Naive RAG approach (**Architecture A**), the document structure is ignored. Dense table rows are flattened into raw text and grouped arbitrarily, potentially causing numbers to lose their headers and contextual labels. In contrast, the Dual-Branch approach (**Architecture B**) ensures that every single row is preserved as its own semantic unit, complete with column/row header tags, preventing structural jumbling and preserving numerical lineage.
 
-### Modeling and Results
+### Results
 
--   Explain your data preprocessing and cleaning steps.
+To evaluate the numerical fidelity of our retrieval-augmented generation pipelines, we analyzed the performance of both **Architecture A (Naive RAG)** and **Architecture B (Table-Aware Dual-Branch RAG)** across all 60 queries in our benchmark dataset.
 
--   Present your key findings in a clear and concise manner.
+The chart below (@fig-architecture-comparison-metrics) visualizes the performance across four key metrics:
 
--   Use visuals to support your claims.
+1. **PageHit Recall**: Did the system retrieve the correct source document and page?
 
--   **Tell a story about what the data reveals.**
+2. **PageHit Precision**: How well did the system rank the correct source chunk within the top 5 results?
 
-```{r}
+3. **NAV Accuracy**: Did the final generated answer contain the correct numerical value?
 
+4. **Conditional Extraction Accuracy (CEA)**: Given that the correct context was successfully retrieved, did the LLM accurately extract the final numerical value?
+
+```{python}
+#| label: fig-architecture-comparison-metrics
+#| fig-cap: "Performance Comparison: Naive vs. Table-Aware RAG"
+#| output: true
+import sys
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Add project root to python path so we can import our modules
+sys.path.insert(0, os.path.abspath("."))
+from src.evaluation import calculate_cea
+
+# Load the evaluation results
+df = pd.read_csv('data/eval/eval_results.csv')
+
+# Calculate the mean for basic metrics
+naive_metrics = {
+    'PageHit Recall': df['Naive_PageHit'].mean(),
+    'PageHit Precision': df['Naive_PageHit_Precision'].mean(),
+    'NAV Accuracy': df['Naive_NAV'].mean()
+}
+
+ta_metrics = {
+    'PageHit Recall': df['TableAware_PageHit'].mean(),
+    'PageHit Precision': df['TableAware_PageHit_Precision'].mean(),
+    'NAV Accuracy': df['TableAware_NAV'].mean()
+}
+
+# Calculate Conditional Extraction Accuracy (CEA) using our metric function
+results_list = df.to_dict('records')
+naive_metrics['CEA'] = calculate_cea(results_list, 'Naive_PageHit', 'Naive_NAV')
+ta_metrics['CEA'] = calculate_cea(results_list, 'TableAware_PageHit', 'TableAware_NAV')
+
+# Data preparation for plotting
+labels = list(naive_metrics.keys())
+naive_values = [naive_metrics[label] for label in labels]
+ta_values = [ta_metrics[label] for label in labels]
+
+y = np.arange(len(labels))
+height = 0.35
+
+# Plot results in hbar
+fig, ax = plt.subplots(figsize=(10, 6))
+rects1 = ax.barh(y - height/2, naive_values, height, label='Architecture A (Naive)', color='#711fb4')
+rects2 = ax.barh(y + height/2, ta_values, height, label='Architecture B (Table-Aware)', color='#3a84ed')
+
+ax.set_xlabel('Score')
+ax.set_title('Evaluation Metrics by Architecture')
+ax.set_yticks(y)
+ax.set_yticklabels(labels)
+ax.set_xlim(0, 1.15)
+ax.invert_yaxis()  # Metrics read from top to bottom
+ax.legend(loc='upper right')
+
+# Add data labels
+for rect in rects1:
+    width = rect.get_width()
+    ax.annotate(f'{width:.2f}',
+                xy=(width, rect.get_y() + rect.get_height() / 2),
+                xytext=(3, 0),  # 3 points horizontal offset
+                textcoords="offset points",
+                ha='left', va='center')
+
+for rect in rects2:
+    width = rect.get_width()
+    ax.annotate(f'{width:.2f}',
+                xy=(width, rect.get_y() + rect.get_height() / 2),
+                xytext=(3, 0),  # 3 points horizontal offset
+                textcoords="offset points",
+                ha='left', va='center')
+
+fig.tight_layout()
+plt.show()
 ```
 
-### Conclusion
+::: callout-note
+**Architecture A** is a linear chunking approach that compresses an entire document into fixed-size chunks. Therefore, it loses the document's structure (e.g., page numbers, tables, and other objects). As a result, we are unable to compute `PageHitRecall`, `PageHitPrecision` and `CEA` for our naive RAG approach.
+:::
+
+**PageHit Recall** and **PageHit Precision** provide insight into the retrieval process in **Architecture B** and how well it performs. From the **PageHit Recall** score, we can see that the relevant chunks are included in our context window; however, with a **PageHit Precision** score of $0.57$, we can deduce that the relevant chunks are ranked either 2nd or 3rd among the `top_k = 5`.  This may lead to the LLM receiving a lot of noise in the context window, which in turn could be impacting the numerical fidelity of the response. A **CEA** score of $0.93$ confirms that, if the correct chunks are retrieved, the LLM performs well in providing the correct response. This reassures us that some tuning to the retrieval stage may be advantageous for **Architecture B**.
+
+**NAV Accuracy** is the primary metric we focus on in this experiment. Contrary to our expectations, **Architecture A** performs better than **Architecture B** when evaluated solely on the numerical fidelity of the answers. The ~7% difference (4 questions) is not enough to completely dismiss **Architecture B**. In the next (@fig-nav-by-tier), we will explore the results by question tier to determine whether certain types of questions are better suited to one architecture than the other.
+ 
+
+```{python}
+#| label: fig-nav-by-tier
+#| fig-cap: "NAV Accuracy by Question Tier: Naive vs. Table-Aware RAG"
+#| output: true
+
+# Load the evaluation results
+df = pd.read_csv('data/eval/eval_results.csv')
+
+# Calculate mean NAV Accuracy grouped by Tier
+tier_nav = df.groupby('Tier')[['Naive_NAV', 'TableAware_NAV']].mean()
+
+# Extract labels and values
+labels = tier_nav.index.tolist()
+naive_values = tier_nav['Naive_NAV'].tolist()
+ta_values = tier_nav['TableAware_NAV'].tolist()
+
+y = np.arange(len(labels))
+height = 0.35
+
+# Plot results
+fig, ax = plt.subplots(figsize=(10, 6))
+rects1 = ax.barh(y - height/2, naive_values, height, label='Architecture A (Naive)', color='#711fb4')
+rects2 = ax.barh(y + height/2, ta_values, height, label='Architecture B (Table-Aware)', color='#3a84ed')
+
+ax.set_xlabel('NAV Accuracy Score')
+ax.set_title('NAV Accuracy by Question Tier')
+ax.set_yticks(y)
+ax.set_yticklabels(labels)
+ax.set_xlim(0, 1.15)
+ax.invert_yaxis()  # Tiers read from top to bottom
+ax.legend(loc='lower right')
+
+# Add data labels
+for rect in rects1:
+    width = rect.get_width()
+    ax.annotate(f'{width:.2f}',
+                xy=(width, rect.get_y() + rect.get_height() / 2),
+                xytext=(3, 0),  # 3 points horizontal offset
+                textcoords="offset points",
+                ha='left', va='center')
+
+for rect in rects2:
+    width = rect.get_width()
+    ax.annotate(f'{width:.2f}',
+                xy=(width, rect.get_y() + rect.get_height() / 2),
+                xytext=(3, 0),  # 3 points horizontal offset
+                textcoords="offset points",
+                ha='left', va='center')
+
+fig.tight_layout()
+plt.show()
+```
+
+
+## Conclusion
 
 -   Summarize your key findings.
 
