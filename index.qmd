@@ -9,6 +9,7 @@ format:
     toc: true
     toc-depth: 3
     toc-title: "Navigation"
+    html-math-method: katex
 course: Capstone Projects in Data Science
 bibliography: references.bib # file contains bibtex for references
 #always_allow_html: true # this allows to get PDF with HTML features
