@@ -10,6 +10,8 @@ format:
     toc-depth: 3
     toc-title: "Navigation"
     html-math-method: katex
+    embed-resources: true
+    self-contained-math: true
 course: Capstone Projects in Data Science
 bibliography: references.bib # file contains bibtex for references
 #always_allow_html: true # this allows to get PDF with HTML features
@@ -27,7 +29,7 @@ Slides: [slides.html](slides.html){target="_blank"}
 ## Introduction
 
 ### The Real-World Risk: Why Tiny AI Mistakes Matter
-Today, many companies use AI assistants to quickly find information buried in their internal reports. These systems are great at summarizing emails or articles, but they often fail when reading financial tables [@guo2026ftrag]. Imagine an employee asking the AI system for a company’s total debt from a dense financial document. In a typical financial table, a number like “450” might mean $450 million if it is listed under a header that says “figures in millionsthousands.” Because standard AI reads text in a straight line from left to right, it can lose track of those important headers and labels. It might report the debt as just $450 or link the number to the wrong year entirely. In the world of finance, a mistake like this isn’t just a small typo; it can lead to massive losses or legal trouble. 
+Today, many companies use AI assistants to quickly find information buried in their internal reports. These systems are great at summarizing emails or articles, but they often fail when reading financial tables [@guo2026ftrag]. Imagine an employee asking the AI system for a company’s total debt from a dense financial document. In a typical financial table, a number like “450” might mean $450 million if it is listed under a header that says “figures in millions.” Because standard AI reads text in a straight line from left to right, it can lose track of those important headers and labels. It might report the debt as just $450 or link the number to the wrong year entirely. In the world of finance, a mistake like this isn’t just a small typo; it can lead to massive losses or legal trouble. 
 
 This problem is commonly known as the gap between what a table says and what the AI actually understands. The dominant approach for building document-querying AI systems is Retrieval-Augmented Generation (RAG) [@malali2025role] — a method that retrieves relevant passages from a document library before generating a response, grounding the AI’s answer in real source material. While RAG has proven effective for regulatory compliance, audit reporting, and other text-heavy financial tasks, its standard pipeline was designed for narrative prose and breaks down when applied to structured tables. This paper compares a standard RAG baseline against a table-aware pipeline on a corpus of real financial reports, introducing a Numerical Atomic Verification (NAV) metric to explicitly measure numerical fidelity in model outputs.
 
@@ -189,7 +191,7 @@ The first step in **Architecture B** is **Bifurcated Ingestion**, which separate
 
 In this step, the continuous narrative text is parsed into chunks, which is conceptually similar to the indexing process in **Architecture A**. The same target dimensions are utilized (chunk_size = 512, chunk_overlap = 50) and splitting library. However, it introduces two key deviations:
 
-1. **Structural Delimiters**: While **Architecture A** flattens and splits the text using basic space and character delimiters (`[" ",""]`), **Architecture B** employs a prioritized separator hierarchy `["\\n\\n", "\\n", " ",""]`. This forces the splitting algorithm to partition text at natural paragraph and sentence boundaries first, keeping reading context intact rather than severing blocks mid-sentence.
+1. **Structural Delimiters**: While **Architecture A** flattens and splits the text using basic space and character delimiters (`[" ",""]`), **Architecture B** employs a prioritized separator hierarchy `["\n\n", "\n", " ",""]`. This forces the splitting algorithm to partition text at natural paragraph and sentence boundaries first, keeping reading context intact rather than severing blocks mid-sentence.
 2. **Metadata Preservation**: In **Architecture A**, page coordinates are lost during the text flattening, resulting in all chunks being tagged as `"page: unknown"`. In **Architecture B**, page indicators (e.g. `"--- Page X (text) ---"`) are parsed and stripped before splitting, allowing every resulting prose chunk to carry precise page coordinates in its metadata.
 
 #### Step 2b: SRSE Row Chunking
@@ -583,6 +585,7 @@ fig.tight_layout()
 plt.show()
 ```
 
+@fig-nav-by-tier shows that the naive RAG method (**Architecture A**) outperformed our table-focused method (**Architecture B**) across all question types. This was surprising, especially for extraction questions (**Tier 2**) where we expected our method to be more accurate because it links headers to data. Instead, the simpler baseline method was more accurate. Our tests suggest the problem isn't the LLM's ability to generate answers, but how it finds the data. Because we broke the tables into single rows, they may lack important keyword context such as the report year or “UWF”, causing the search system to miss them $25\%$ of the time. However, when the system did find the right data, our new method was $93\%$ accurate, proving it works well once it has the correct information.
 
 ## Conclusion
 
