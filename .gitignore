@@ -9,7 +9,6 @@ tests/*
 .env
 src/run_evaluation.py
 src/populate_ground_truth.py
-data/eval/responses/*
 data/eval/generated_results.csv
 src/ragas_shim.py
 src/evaluate_ragas.py
