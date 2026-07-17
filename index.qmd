@@ -589,8 +589,22 @@ plt.show()
 
 ## Conclusion
 
--   Summarize your key findings.
+This study compared a baseline linear-chunking RAG pipeline (**Architecture A**) against a proposed table-aware, dual-branch RAG pipeline (**Architecture B**) using a corpus of dense university financial reports.
 
--   Discuss the implications of your results.
+### Key Findings
+- **Unexpected Results**: Contrary to our expectations, the standard, simpler method (**Architecture A**) outperformed our custom table-focused method (**Architecture B**) across all question types. **Architecture A** was more accurate at finding financial numbers, even in complex tables.
+- **The Search Problem**: Our deep dive showed that **Architecture B** struggled not because it couldn't understand the information, but because it had trouble finding the right information. Since our proposed method focused on individual table rows, it missed important context, such as the company name, financial year, or table title. This caused it to fail to locate the correct context $25\%$ of the time.
+- **Successful Generation**: However, when **Architecture B** found the right information, it was excellent at using it to answer questions, achieving a $93\%$ success rate. This signals the core generation process is very strong.
+
+### Implications and Potential Solutions
+Our findings reveal a key trade-off: breaking documents into smaller, more detailed pieces helps keep the original layout, but it makes it much harder for search tools to find the right information. Traditional search methods (like **BM25**) work best with larger, word-heavy blocks of text because they look for exact keyword matches.
+
+To resolve this retrieval bottleneck in future iterations of table-aware RAG, we propose the following paths forward:
+
+1. **Metadata Enrichment**: Pre-pending global document variables (e.g., reporting year, and table headers) to the text representation of each individual row chunk before indexing. This ensures row-level chunks retain searchability for macro-queries.
+2. **Hybrid and Dense Retrieval**: Instead of just looking for exact keyword matches, we can switch to dense vector embeddings with a re-ranking layer (hybrid retrieval). These tools understand the meaning behind words, helping the system find information even if the specific words don't match exactly in additon to the abilty to re-sort the retrieved chunks to the top of the context (@zhao2024dense).
+3. **Multi-Stage Search**: We can use a "parent-child" approach. The system would first find the right page (the parent), look for tabular data on that page, and then zoom in to find the specific table row (the child) within it, ensuring it doesn't get lost in the search.
+
+This research highlights a major challenge in building reliable AI for finance: it is hard to balance keeping data organized, making it easy for the system to find without losing context. While our **Table-Aware** method (**Architecture B**) provides highly accurate answers once it finds the right information, our results indicate that we need better search tools to handle complex data structures. By switching to smarter systems that better understand how documents are laid out, we can fix the problems caused by older, simpler search methods. This is crucial not only for creating better financial reports, but for ensuring that AI assistants are reliable, trustworthy tools for people when accuracy is a priority.
 
 ## References
