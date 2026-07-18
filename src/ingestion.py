@@ -13,10 +13,20 @@ Funtions:
 '''
 
 import pdfplumber
+import camelot
 import re
 from typing import List, Dict, Any
 
-def is_numeric_data(cell_str):
+def is_numeric_data(cell_str: str) -> bool:
+    """
+    Check if a cell contains numeric data
+    
+    **Args**:
+        cell_str (str): String to check for numeric data
+        
+    **Returns**:
+        bool: True if the cell contains numeric data, False otherwise
+    """
     clean_str = re.sub(r'[$, \(\)%]', '', str(cell_str)).strip()
     try:
         float(clean_str)
@@ -99,7 +109,6 @@ def parse_document_table_aware(pdf_path: str, table_extractor: str = "pdfplumber
     # Open PDF file for reading
     try:
         if table_extractor == "camelot":
-            import camelot
             # Extract all tables across the document
             cam_tables = camelot.read_pdf(pdf_path, flavor='stream', pages='all')
             camelot_tables_by_page = {}
