@@ -49,7 +49,8 @@ def index_table_aware_rows(parsed_data: dict, chunk_size: int = 512, chunk_overl
     '''
     Separates indexing into two categories:
     1. Chunks continuous narrative prose standardly.
-    2. Implements **Single-Row Single-Embedding (SRSE)** by converting each isolated table row into a structured Markdown line enriched with header metadata, index references, and table coordinates.
+    2. Implements **Single-Row Single-Embedding (SRSE)** by converting each isolated table row into a structured 
+    Markdown line enriched with header metadata, index references, and table coordinates.
     
     Args:
         parsed_data (dict): Dictionary containing 'text' and 'tables'.
@@ -57,7 +58,7 @@ def index_table_aware_rows(parsed_data: dict, chunk_size: int = 512, chunk_overl
         chunk_overlap (int): Number of overlapping tokens between consecutive chunks.
 
     Returns:
-        dict: Dictionary containing 'text' and 'tables'.
+        dict: Dictionary containing 'text', 'tables', and 'metadata'.
     '''
     # Initialize metadata variables
     table_aware_text = []

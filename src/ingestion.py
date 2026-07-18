@@ -133,6 +133,7 @@ def parse_document_table_aware(pdf_path: str, table_extractor: str = "pdfplumber
                     # Find tables on this page to exclude their boundaries from narrative prose
                     page_tables = page.find_tables()
                     
+                    # check if an object is inside a table
                     def not_in_table(obj):
                         if obj.get("object_type") == "char":
                             for t in page_tables:
@@ -171,6 +172,8 @@ def parse_document_table_aware(pdf_path: str, table_extractor: str = "pdfplumber
                         if has_numeric:
                             valid_cam_tables.append(t)
                     cam_page_tables = valid_cam_tables
+                    
+                    # Check if an object is inside a table
                     def not_in_table(obj):
                         if obj.get("object_type") == "char":
                             for t in cam_page_tables:

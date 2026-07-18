@@ -146,7 +146,7 @@ $$\text{IDF}(q_i) = \ln \left( \frac{N - n(q_i) + 0.5}{n(q_i) + 0.5} + 1 \right)
 
 #### Step 4: Generation
 
-The final step in **Architecture A** is **Generation**, where the system converts the information found into a plain-language answer. The top 5 text chunks are combined and sent to the LLM (`Gemini 3.5-flash`), which acts as a financial assistant. The Large Language Model (LLM) is instructed to use only the provided information or provide a fallback if the answer is missing. This ensures that the LLM's focus is on grounded information and reduces the risk of hallucinations [@asai2024selfrag]. Because this method treats tables like simple text and loses their headers, the LLM often receives scrambled data. This forces the model to piece together disjointed numbers, which could lead to wrong answers or hallucinations. In addition to the context, the user’s query is also injected into the final prompt sent to the LLM.
+The final step in **Architecture A** is Generation, where the system converts the information found into a plain-language answer. The top 5 text chunks are combined and sent to the LLM (`Gemini 3.5-flash`), which acts as a financial assistant. The Large Language Model (LLM) is instructed to use only the provided information or provide a fallback if the answer is missing. This ensures that the LLM's focus is on grounded information and reduces the risk of hallucinations [@asai2024selfrag]. Because this method treats tables like simple text and loses their headers, the LLM often receives scrambled data. This forces the model to piece together disjointed numbers, which could lead to wrong answers or hallucinations. In addition to the context, the user’s query is also injected into the final prompt sent to the LLM.
 
 Below is the prompt template used by the generative step:
 
@@ -185,7 +185,11 @@ flowchart TB
 
 #### Step 1: Bifurcated Ingestion
 
-The first step in **Architecture B** is **Bifurcated Ingestion**, which separates narrative prose from tabular structures at the document-parsing level. Using the `pdfplumber` library, the pipeline processes each PDF page by page to prevent layout flattening. For each page, narrative text is extracted by default, while structured tables are extracted separately as individual multidimensional grids. Cell values are cleaned of internal newlines to preserve boundary integrity, and the columns are joined with a `|` delimiter. This results in two isolated document branches, a prose branch and a raw structured table branch, ensuring that tabular elements are preserved in their native grid coordinates rather than being jumbled into a single linear text stream.
+The first step in **Architecture B** is Bifurcated Ingestion, which separates narrative prose from tabular structures using the `parse_document_table_aware` pipeline. Tables are parsed using `camelot`, and any text found in the tables is excluded from the prose chunks, preventing table cell contents from being included. 
+
+To maintain structural integrity, a few preprocessing steps are required. Multi-row table headers are consolidated into a single row to reduce the number of invalid rows. Schema context is preserved by taking the last non-empty value in each column. Additionally, cells undergo delimiter separation, where internal newlines are removed, and content is joined using a pipe (|) delimiter. Finally, currency cleanups are performed using regex to eliminate extraneous whitespace between currency symbols and values, and to merge any isolated dollar signs back into their respective cell data.
+
+This bifurcated extraction creates two isolated document branches (prose text and structured table grids), ensuring that layout-heavy financial information is stored as clean, structured tables rather than a linear prose stream.
 
 #### Step 2a: Narrative Chunking
 
