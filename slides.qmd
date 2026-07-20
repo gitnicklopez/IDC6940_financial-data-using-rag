@@ -1,117 +1,405 @@
 ---
-title: "Evaluating Numerical Fidelity in Financial Documents: A Comparative Analysis of Naive and Table-Aware Dual-Branch RAG Architectures"
+title: "Evaluating Numerical Fidelity Using Table-Aware Dual-Branch RAG"
 subtitle: "A Capstone Project in Data Science"
 author(s): "Crystal Shin, Gredy, and Nick Lopez"
-date: '`r Sys.Date()`'
+date: "2026-07-28"
+date-format: long
 format:
-  revealjs
-course: Capstone Projects in Data Science
-bibliography: references.bib # file contains bibtex for references
-#always_allow_html: true # this allows to get PDF with HTML features
-self-contained: true
-execute: 
-  warning: false
-  message: false
-editor: 
-  markdown: 
-    wrap: 72
+  revealjs:
+    theme: default
+    slide-number: true
+    smaller: true
+    scrollable: true
+    chalkboard: true
+editor: visual
 ---
 
-::: callout-important
-**Remember:** Your goal is to make your audience understand and care
-about your findings. By crafting a compelling story, you can effectively
-communicate the value of your data science project.
+## The Problem: Tiny AI Mistakes, Big Consequences {align="center" background-image="assets/images/Slide_2-The_Problem.png" background-position="center 60%" background-size="50%" background-repeat="no-repeat"}
 
-Carefully read this template since it has instructions and tips to
-writing!
-
-More information about `revealjs`:
-<https://quarto.org/docs/reference/formats/presentations/revealjs.html>
+::: {.footer style="font-size: 0.2em; color: gray;"}
+This image was generated using Gemini.
 :::
 
-## Introduction  {.smaller}
+## Why This Happens
 
--   Develop a storyline that captures attention and maintains interest.
+-   Retrieval-Augmented Generation (RAG) retrieves relevant passages from a document library, then grounds an LLM's answer in that material.
+-   Naive RAG works well for narrative, text-heavy tasks (compliance, audit reporting).
+-   Standard RAG pipelines read documents linearly — great for prose, but potentially bad for structured tables.
 
--   Your audience is your peers
+Two potential failure points:
 
--   Clearly state the problem or question you're addressing.
+-   **Context Loss** — chunking separates numbers from their row/column labels.
+-   **Formatting Issues** — linear reading jumbles rows and columns together.
 
--   Introduce why it is relevant needs.
+## Methodology
 
--   Provide an overview of your approach.
+We compare two RAG architectures on a corpus of real financial reports, and introduce a new metric — **Numerical Atomic Verification (NAV)** — to explicitly measure numerical fidelity.
 
-In kernel estimator, weight function is known as kernel function
-[@efr2008]. Cite this paper [@bro2014principal]. The GEE [@wang2014].
-The PCA [@daffertshofer2004pca]\*
+-   **Architecture A — Naive RAG**: Comparitive baseline that uses linear PDF text extraction + basic semantic search.
+-   **Architecture B — Table-Aware Dual-Branch RAG**: Proposed pipeline that separates narrative text from tables, preserves row/column lineage, and reconstructs full tables at query time.
 
-## Methods
+## Architecture A: Naive RAG {.smaller}
+:::{.columns}
+:::{.column width="30%"}
+```{mermaid}
+%%| fig-align: center
+flowchart TB
+    A_Ingest["Step 1: Ingestion"]
+    A_Ingest --> A_Chunk["Step 2: Indexing"]
+    A_Chunk --> A_Index["Step 3: Retrieval"]
+    A_Index --> A_Retrieve["Step 4: Generation"]
 
--   Detail the models or algorithms used.
+    classDef nodeA fill:#ede9fe,stroke:#7c3aed,stroke-width:1.5px,color:#1e1b4b,vertical-align:top,horizontal-align:left,width:170px,height:50px
+    class A_Ingest,A_Chunk,A_Index,A_Retrieve nodeA
+```
+:::
+:::{.column width="70%"}
+1.  **Ingestion** — `pdfplumber` reads text sequentially, ignoring table bounding boxes. A table row becomes one flat string with no link between headers and values.
+2.  **Indexing** — `RecursiveCharacterTextSplitter` (chunk size 512, overlap 50), split on space/character only — often cuts tables apart mid-row.
+3.  **Retrieval** — query + corpus normalized (`tokenize()`), ranked with **BM25Okapi** (top-5 chunks).
+4.  **Generation** — top chunks + query sent to **Gemini 3.5-flash**, instructed to answer only from provided context.
+:::
+:::
+## Architecture B: Table-Aware Dual-Branch RAG {.smaller}
 
--   Justify your choices based on the problem and data.
+:::{.columns}
+:::{.column width="65%"}
+1.  **Bifurcated Ingestion** — `camelot` extracts tables, `pdfplumber` extracts narrative text; headers consolidated, data cleansed. 
+2.  **Narrative Chunking** — same 512/50 sizing as A, but splits on paragraph/sentence boundaries first and preserves page metadata.
+3.  **SRSE Row Chunking** — every table row becomes one **Single-Row Single-Embedding** string
+4.  **Hybrid Index** — narrative text and table rows kept in separate, metadata-rich lists.
+5.  **Dual-Channel Retrieval + Reconstruction** — searches both branches with **BM25**; a matched row triggers **full-table reconstruction** before generation.
+:::
+:::{.column width="35%"}
+```{mermaid}
+%%| fig-align: center
+flowchart TB
+    B_Ingest["Step 1: Bifurcated<br>Ingestion"]
+    B_Ingest -->|Prose| B_Text["Step 2a: Narrative<br>Chunking"]
+    B_Ingest -->|Tables| B_SRSE["Step 2b: SRSE Row<br>Chunking"]
+    B_Text --> B_Index["Step 3: Hybrid<br>Index"]
+    B_SRSE --> B_Index
+    B_Index --> B_Recon["Step 4: Dual-Channel<br>Retrieval &<br>Reconstruction"]
+    B_Recon --> B_LLM["Step 5: Generation"]
 
+    classDef nodeB fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#1e3a5f,vertical-align:middle,horizontal-align:middle,width:180px,height:75px,padding-top: 0px, padding-bottom: 0px, padding-left: 0px, padding-right: 0px
+    class B_Ingest,B_Text,B_SRSE,B_Index,B_Recon,B_LLM nodeB
+```
+:::
+:::
 
+## Table Reconstruction — Example
 
-## Data Exploration and Visualization
+Real reconstructed table from UWF financial statement (FY 21–22, page 12):
 
--   Describe your data sources and collection process.
+```{python}
+#| echo: false
+#| eval: true
+import json
+from src.retrieval import reconstruct_table
 
--   Present initial findings and insights through visualizations.
+with open("data/indexed/table-aware_SRSE.json", "r", encoding="utf-8") as f:
+    table_row_index = json.load(f)
 
--   Highlight unexpected patterns or anomalies.
+# Filter for a single row chunk belonging to the reconstructed table
+reconstructed_rows = [
+    r for r in table_row_index 
+    if r.get("metadata", {}).get("table_id") == "Page_12_Table_1" 
+    and r.get("metadata", {}).get("filename") == "UWF-Financial-Statement-FY-21-22.pdf"
+]
+print("Single JSON Row Chunk:")
+print(json.dumps(reconstructed_rows[0], indent=4))
 
-## Data Exploration and Visualization {.smaller}
-
-A study was conducted to determine how...
-
-```{r, warning=FALSE, echo=F, message=FALSE}
-# loading packages 
-library(tidyverse)
-library(knitr)
-library(ggthemes)
-library(ggrepel)
-library(dslabs)
+print("\nReconstructed Markdown Table:")
+reconstructed_markdown = reconstruct_table(
+    table_id="Page_12_Table_1",
+    filename="UWF-Financial-Statement-FY-21-22.pdf",
+    table_row_index=table_row_index
+)
+print(reconstructed_markdown)
 ```
 
-```{r, warning=FALSE, echo=F}
-# Load Data
-#kable(head(murders))
+Individual SRSE rows are re-assembled into a complete, correctly ordered table with headers restored — instead of the LLM seeing a single isolated fragment.
 
-ggplot1 = murders %>% ggplot(mapping = aes(x=population/10^6, y=total)) 
+## Generation Prompt {.smaller}
 
-  ggplot1 + geom_point(aes(col=region), size = 4) +
-  geom_text_repel(aes(label=abb)) +
-  scale_x_log10() +
-  scale_y_log10() +
-  geom_smooth(formula = "y~x", method=lm,se = F)+
-  xlab("Populations in millions (log10 scale)") + 
-  ylab("Total number of murders (log10 scale)") +
-  ggtitle("US Gun Murders in 2010") +
-  scale_color_discrete(name = "Region")+
-      theme_bw()
-  
+Below is the prompt template used by the generative step:
 
+```text
+You are a helpful assistant analyzing financial documents.
+Answer the user's question using only the provided context. 
+If the answer is not in the context, say "I cannot answer this based on the provided documents.".
+
+Context:
+{Retrieved Context Chunks}
+
+Question:
+{User Query}
+```
+## Retrieved Context {.smaller}
+
+````markdown
+{{< include data/eval/responses/T1-01.md >}}
+````
+
+## Evaluation Framework
+
+-   **Corpus**: 5 years of University of West Florida Annual Financial Statements (60+ dense pages each; text + tables).
+-   **60 benchmark questions**, tiered by cognitive complexity:
+
+| Tier | Type | Description | Count |
+|------|------|------------------------------------------|-------|
+| 1 | Target Financial Values | Direct lookup of a single figure | 20 |
+| 2 | Table Extraction | Locate/extract values from dense tables | 20 |
+| 3 | Synthesis & Reasoning | Compare across documents / multi-step | 20 |
+
+-   Ground truth defines expected file, page, and exact numeric answer for each question.
+
+## Evaluation Questions
+
+```{python}
+#| echo: false
+#| eval: true
+#| output: asis
+import pandas as pd
+
+evaluation = pd.read_csv("data/eval/questions.csv")
+top_questions = evaluation.groupby("Tier").head(1)
+cols = ["Tier", "Question", "corpus_file", "Expected_Table_ID", "Expected_Answer"]
+
+print(top_questions[cols].to_markdown(index=False))
 ```
 
-## Modeling and Results
+## Metrics
 
--   Explain your data preprocessing and cleaning steps.
+|Metric|Description|
+|------|-----------|
+|PageHit Recall|Did the correct document/page appear in the top-5 retrieved chunks? (binary)|
+|PageHit Precision|How highly was the correct chunk ranked within the top-5?|
+|NAV (Numerical Atomic Verification)|Scores answers with diminishing rewards for rounding: 1.0 (≤0.1% error), 0.75 (≤0.5%), 0.5 (≤5%), 0 otherwise.|
+|CEA (Conditional Extraction Accuracy)|For questions where retrieval was successful (PageHit Recall = 1), how often was the final answer correct?|
 
--   Present your key findings in a clear and concise manner.
+## Data Exploration: Corpus Volume & Complexity
 
--   Use visuals to support your claims.
+```{python}
+#| echo: false
+#| eval: true
+#| output: asis
+import pandas as pd
 
--   **Tell a story about what the data reveals.**
+# read corpus statistics 
+df = pd.read_csv('data/corpus_statistics.csv')
+df['Avg_Rows_Per_Table'] = df['Total_Table_Rows'] / df['Total_Tables']
+cols = ['Fiscal_Year', 'Total_Pages', 'Total_Text_Blocks',
+        'Total_Tables', 'Total_Table_Rows', 'Avg_Rows_Per_Table']
 
-```{r}
-
+print(df[cols].round(0).to_markdown(index=False))
 ```
+
+Each fiscal year: 60–67 pages, 13–14 tables, roughly 60 table rows total.
+
+## Indexing Granularity: A vs. B
+```{python}
+#| eval: true
+#| output: asis
+import plotly.graph_objects as go
+
+# Corpus Volume & Complexity
+fig2 = go.Figure()
+
+# Architecture A: Naive RAG (Single bar per FY)
+fig2.add_trace(go.Bar(
+    x=df['Fiscal_Year'],
+    y=df['Naive_Chunks'],
+    name='Architecture A: Naive Chunks',
+    marker_color='#711fb4',
+    offsetgroup=0,
+    hovertemplate='Fiscal Year: %{x}<br>Naive Chunks: %{y}<extra></extra>'
+))
+
+# Architecture B: Table-Aware RAG (Stacked bars per FY)
+fig2.add_trace(go.Bar(
+    x=df['Fiscal_Year'],
+    y=df['Narrative_Chunks'],
+    name='Architecture B: Narrative Chunks',
+    marker_color='#3a84ed',
+    offsetgroup=1,
+    hovertemplate='Fiscal Year: %{x}<br>Narrative Chunks: %{y}<extra></extra>'
+))
+
+# Create custom data to show actual SRSE chunks and total chunks for Architecture B
+custom_data_srse = [[srse, srse + narr] for srse, narr in zip(df['SRSE_Chunks'], df['Narrative_Chunks'])]
+
+fig2.add_trace(go.Bar(
+    x=df['Fiscal_Year'],
+    y=df['SRSE_Chunks'],
+    name='Architecture B: SRSE Chunks',
+    marker_color='#0edda5',
+    offsetgroup=1,
+    base=df['Narrative_Chunks'],
+    customdata=custom_data_srse,
+    hovertemplate='Fiscal Year: %{x}<br>SRSE Chunks: %{customdata[0]}<br>Total Chunks: %{customdata[1]}<extra></extra>'
+))
+
+fig2.update_layout(
+    title='Figure 1: Chunks Generated by Architecture',
+    xaxis_title='Fiscal Year',
+    yaxis_title='Number of Chunks',
+    barmode='group',
+    legend_title='Chunk Type',
+    legend=dict(
+        orientation="h",
+        yanchor="top",
+        y=-0.2,
+        xanchor="right",
+        x=1
+    ),
+    template='plotly_white'
+)
+fig2.show()
+```
+
+## Results: Overall Performance
+
+```{python}
+#| echo: false
+#| message: false
+#| warning: false
+import numpy as np
+import matplotlib.pyplot as plt
+from src.evaluation import calculate_cea
+
+df = pd.read_csv('data/eval/eval_results.csv')
+
+naive_metrics = {
+    'PageHit Recall': df['Naive_PageHit'].mean(),
+    'PageHit Precision': df['Naive_PageHit_Precision'].mean(),
+    'NAV Accuracy': df['Naive_NAV'].mean()
+}
+ta_metrics = {
+    'PageHit Recall': df['TableAware_PageHit'].mean(),
+    'PageHit Precision': df['TableAware_PageHit_Precision'].mean(),
+    'NAV Accuracy': df['TableAware_NAV'].mean()
+}
+results_list = df.to_dict('records')
+naive_metrics['CEA'] = calculate_cea(results_list, 'Naive_PageHit', 'Naive_NAV')
+ta_metrics['CEA'] = calculate_cea(results_list, 'TableAware_PageHit', 'TableAware_NAV')
+
+architectures = ['Architecture A (Naive)', 'Architecture B (Table-Aware)']
+metrics_keys = ['PageHit Recall', 'PageHit Precision', 'NAV Accuracy', 'CEA']
+colors = ['#711fb4', '#3a84ed', '#0edda5', '#ff9f43']
+
+y = np.arange(len(architectures))
+height = 0.18
+offsets = [-1.5 * height, -0.5 * height, 0.5 * height, 1.5 * height]
+
+fig, ax = plt.subplots(figsize=(9, 5))
+
+for i, metric in enumerate(metrics_keys):
+    metric_values = [naive_metrics[metric], ta_metrics[metric]]
+    bars = ax.barh(y + offsets[i], metric_values, height, label=metric, color=colors[i])
+    # Add labels on the bars
+    for bar in bars:
+        width = bar.get_width()
+        if width > 0:
+            ax.text(width + 0.01, bar.get_y() + bar.get_height()/2, f'{width:.2f}', 
+                    va='center', ha='left', fontsize=9)
+
+ax.set_xlabel('Score')
+ax.set_title('Evaluation Metrics by Architecture')
+ax.set_yticks(y)
+ax.set_yticklabels(architectures)
+ax.set_xlim(0, 1.15)
+ax.invert_yaxis()
+ax.legend(loc='upper right')
+fig.tight_layout()
+plt.show()
+```
+
+::: {.notes}
+Note: PageHit Recall/Precision and CEA aren't computable for Architecture A — its flat chunking discards page/table structure entirely.
+:::
+
+## Results: The Surprise
+
+-   PageHit Recall (B) is high — relevant chunks *are* in the context window.
+-   But PageHit **Precision ≈ 0.57** — correct chunks often rank 2nd–3rd out of 5, adding noise.
+-   **CEA = 0.93** — when Architecture B retrieves the right chunk, the LLM answers correctly almost every time.
+-   Yet on **NAV Accuracy**, the primary metric, **Architecture A outperformed Architecture B by \~7% (4 questions)** — the opposite of what we expected.
+
+## Results by Question Tier
+
+```{python}
+#| echo: false
+#| message: false
+#| warning: false
+tier_nav = df.groupby('Tier')[['Naive_NAV', 'TableAware_NAV']].mean()
+labels = tier_nav.index.tolist()
+naive_values = tier_nav['Naive_NAV'].tolist()
+ta_values = tier_nav['TableAware_NAV'].tolist()
+y = np.arange(len(labels))
+
+fig, ax = plt.subplots(figsize=(9, 5))
+ax.barh(y - height/2, naive_values, height, label='Architecture A (Naive)', color='#711fb4')
+ax.barh(y + height/2, ta_values, height, label='Architecture B (Table-Aware)', color='#3a84ed')
+ax.set_xlabel('NAV Accuracy Score')
+ax.set_title('NAV Accuracy by Question Tier')
+ax.set_yticks(y)
+ax.set_yticklabels(labels)
+ax.set_xlim(0, 1.15)
+ax.invert_yaxis()
+ax.legend(loc='lower right')
+fig.tight_layout()
+plt.show()
+```
+
+Naive RAG (A) outperformed Table-Aware RAG (B) across **all three tiers** — even Tier 2 (table extraction), where B was expected to win.
+
+## Why Did the "Better" Method Lose?
+
+-   Not a generation problem — Architecture B is 93% accurate *when it finds the right data* (CEA).
+-   It's a **retrieval** problem: breaking tables into single-row SRSE chunks strips out broader context (report year, company name, table title).
+-   BM25 keyword search missed the correct row **\~25% of the time** because those keywords weren't present in the isolated row text.
+-   Core trade-off: finer-grained chunking preserves structure but makes chunks *harder to find* with keyword-based search.
+
+## Key Findings
+
+1.  **Unexpected result**: the simpler baseline (Naive RAG) beat the custom table-aware pipeline on numerical accuracy, across every question tier.
+2.  **The search problem**: Table-Aware RAG's row-level chunks lack contextual keywords, causing \~25% retrieval misses.
+3.  **Successful generation**: once the correct data is retrieved, Table-Aware RAG is highly accurate (93% CEA) — the generation step is sound.
+
+## Implications & Next Steps
+
+-   **Metadata Enrichment** — prepend global context (reporting year, table title) to each row chunk before indexing, so macro-queries can still find it.
+-   **Hybrid / Dense Retrieval** — combine BM25 with dense vector embeddings + re-ranking to catch semantic (not just keyword) matches.
+-   **Multi-Stage ("Parent-Child") Search** — first locate the right page, then the right table, then the right row — narrowing top-down instead of searching flat row indexes.
 
 ## Conclusion
 
--   Summarize your key findings.
+-   Table-Aware Dual-Branch RAG (Architecture B) preserves table structure and is highly accurate **once it finds the right evidence**.
+-   But structure preservation alone isn't enough — retrieval must be re-engineered to work with finer-grained, context-poor chunks.
+-   Building reliable financial AI requires balancing structural fidelity with searchability — a core challenge for trustworthy, accurate AI in high-stakes domains.
 
--   Discuss the implications of your results.
+## References {.smaller}
 
-## References
+Asai, Akari, Zeqiu Wu, Yizhong Wang, Avirup Sil, and Hannaneh Hajishirzi. 2024. "Self-RAG: Learning to Retrieve, Generate, and Critique Through Self-Reflection." In *The Twelfth International Conference on Learning Representations*.
+
+Gao, Yunfan, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi, Yi Dai, Jiawei Sun, Meng Wang, and Haofen Wang. 2023. "Retrieval-Augmented Generation for Large Language Models: A Survey." *arXiv Preprint* arXiv:2312.10997.
+
+Guo, Zebin, Weidong Geng, and Ruichen Mao. 2026. "FT-RAG: A Fine-Grained Retrieval-Augmented Generation Framework for Complex Table Reasoning." In *Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD '26)*. ACM.
+
+Islam, Pranab, Anand Kannappan, Douwe Kiela, Rebecca Qian, Nino Scherrer, and Bertie Vidgen. 2023. "FinanceBench: A New Benchmark for Financial Question Answering." <https://arxiv.org/abs/2311.11944>.
+
+Lewis, Patrick, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, et al. 2020. "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks." In *Advances in Neural Information Processing Systems*, 33:9459–74. Curran Associates, Inc.
+
+## References (cont.) {.smaller}
+
+Liu, Zhihao, and Waiyie Leong. 2026. "Table-Aware Row-Level RAG for Classical Chinese Understanding." *Computers* 15 (4): 221. <https://doi.org/10.3390/computers15040221>.
+
+Malali, N. 2025. "The Role of Retrieval-Augmented Generation (RAG) in Financial Document Processing." *International Journal of Management Technology* 12 (3): 26–46.
+
+Microsoft Learn. 2026. "Chunk Large Documents for RAG and Vector Search in Azure AI Search." <https://learn.microsoft.com/en-us/azure/search/vector-search-how-to-chunk-documents>.
+
+Park, Emma. 2025. "Understanding Okapi BM25 — Document Ranking Algorithm." Medium. <https://medium.com/@readwith_emma/understanding-okapi-bm25-document-ranking-algorithm-70d81adab001>.
+
+Zhao, Wayne Xin, Jing Liu, Ruiyang Ren, and Ji-Rong Wen. 2024. "Dense Text Retrieval Based on Pretrained Language Models: A Survey." *ACM Transactions on Information Systems* 42 (1): 1–60. <https://doi.org/10.1145/3637870>.
