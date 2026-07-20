@@ -24,7 +24,7 @@ editor:
     wrap: 72
 ---
 
-Slides: [slides.html](slides.html){target="_blank"}
+<a href="slides.html" target="_blank" class="btn btn-primary" role="button">View Presentation Slides</a>
 
 ## Introduction
 
