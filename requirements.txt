@@ -1,4 +1,5 @@
 pdfplumber
+camelot-py[cv]
 rank-bm25
 numpy
 pytest
@@ -9,5 +10,10 @@ seaborn
 plotly
 jupyter
 langchain-text-splitters
+langchain-google-genai
+langchain-community
+langchain-google-vertexai
+ragas
+datasets
 google-genai
 python-dotenv
